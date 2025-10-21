@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}AskPupkin - Вопросы и ответы{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='base.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="header-top">
+                <div class="logo">
+                    <a href="{{ url_for('index') }}" class="logo-link">AskPupkin</a>
+                </div>
+                
+                <div class="search">
+                    <form class="search-form">
+                        <input type="text" class="search-input" placeholder="Search">
+                        <button type="submit" class="search-button">ASK!</button>
+                    </form>
+                </div>
+                
+                <div class="user-block">
+                    <div class="user-info">
+                        {% if user and user.is_authenticated %}
+                            <img src="{{ url_for('static', filename='My_avatar.png') }}" alt="Avatar" class="user-avatar">
+                            <span class="user-name">{{ user.username }}</span>
+                            <div class="user-menu">
+                                <a href="#" class="user-menu-item">settings</a>
+                                <a href="#" class="user-menu-item">log out</a>
+                            </div>
+                        {% else %}
+                            <div class="user-menu">
+                                <a href="{{ url_for('login') }}" class="user-menu-item">log in</a>
+                                <a href="{{ url_for('signup') }}" class="user-menu-item">register</a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="container">
+            <div class="content-wrapper">
+                <div class="content-main">
+                    {% block content %}{% endblock %}
+                </div>
+
+                <aside class="sidebar">
+                    {% block sidebar %}
+                    <div class="sidebar-block">
+                        <h3 class="sidebar-title">Popular Tags</h3>
+                        <div class="tags-cloud">
+                            {% for tag in tags %}
+                                <a href="#" class="tag tag-popular">{{ tag }}</a>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="sidebar-block">
+                        <h3 class="sidebar-title">Best Members</h3>
+                        <ul class="members-list">
+                            {% for member in members %}
+                                <li class="member-item"><a href="#">{{ member }}</a></li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endblock %}
+                </aside>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

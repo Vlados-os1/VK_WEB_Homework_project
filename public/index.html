@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}Home - AskPupkin{% endblock %}
+
+{% block content %}
+<div class="questions-nav">
+    <h2 class="nav-title">New Questions</h2>
+    <a href="{{ url_for('hot_questions') }}" class="nav-link">Hot Questions</a>
+</div>
+
+<div class="questions-list">
+    {% for question in questions %}
+    <div class="question-item">
+        <div class="question-header">
+            <img src="{{ url_for('static', filename='Ask_avatar.png') }}" alt="User Avatar" class="question-avatar">
+            <div class="question-info">
+                <a href="{{ url_for('question', question_id=question.id) }}" class="question-title">{{ question.title }}</a>
+            </div>
+        </div>
+        <div class="question-content">
+            <p>{{ question.content }}</p>
+        </div>
+        <div class="question-meta">
+            <a href="#" class="answers-count">answer ({{ question.answers_count }})</a>
+            <div class="question-tags">
+                <span class="tags-label">Tags:</span>
+                {% for tag in question.tags %}
+                <a href="#" class="tag">{{ tag }}</a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="pagination">
+    <a href="#" class="page-number active">1</a>
+    <a href="#" class="page-number">2</a>
+    <a href="#" class="page-number">3</a>
+    <span class="page-dots">...</span>
+    <a href="#" class="page-number">53</a>
+</div>
+{% endblock %}
