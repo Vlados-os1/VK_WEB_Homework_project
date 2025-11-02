@@ -10,7 +10,8 @@ mock_questions = [
         'content': 'Guys, i have trouble with a moon park. Can\'t find th black-jack...',
         'author': 'SpaceExplorer',
         'answers_count': 3,
-        'tags': ['black-jack', 'bender']
+        'tags': ['black-jack', 'bender'],
+        'likes': 15
     },
     {
         'id': 2,
@@ -18,7 +19,8 @@ mock_questions = [
         'content': 'Guys, i have trouble with a moon park. Can\'t find th black-jack...',
         'author': 'SpaceExplorer',
         'answers_count': 3,
-        'tags': ['black-jack', 'bender']
+        'tags': ['black-jack', 'bender'],
+        'likes': 0,
     },
     {
         'id': 3,
@@ -26,7 +28,8 @@ mock_questions = [
         'content': 'Guys, i have trouble with a moon park. Can\'t find th black-jack...',
         'author': 'SpaceExplorer',
         'answers_count': 3,
-        'tags': ['black-jack', 'bender']
+        'tags': ['black-jack', 'bender'],
+        'likes': 1,
     },
 ]
 
@@ -37,6 +40,7 @@ mock_answers = [
         'content': 'First of all I would like to thank you for the invitation to participate in such a … Russia is the huge territory which in many respects needs to be render habitable.',
         'author': 'Mr. Freeman',
         'is_correct': True,
+        'likes': 0,
         'created_at': '2 hours ago'
     },
     {
@@ -45,6 +49,7 @@ mock_answers = [
         'content': 'First of all I would like to thank you for the invitation to participate in such a … Russia is the huge territory which in many respects needs to be render habitable.',
         'author': 'Dr. House',
         'is_correct': False,
+        'likes': 0,
         'created_at': '5 hours ago'
     },
     {
@@ -53,6 +58,7 @@ mock_answers = [
         'content': 'First of all I would like to thank you for the invitation to participate in such a … Russia is the huge territory which in many respects needs to be render habitable.',
         'author': 'Bender',
         'is_correct': False,
+        'likes': 0,
         'created_at': '1 day ago'
     }
 ]
@@ -101,8 +107,16 @@ def question(question_id):
                          tags=mock_tags,
                          user={'is_authenticated': False})
 
-@app.route('/ask')
+@app.route('/ask', methods=['GET', 'POST'])
 def ask_question():
+    if request.method == 'POST':
+        title = request.form.get('title')
+        text = request.form.get('text')
+        tags = request.form.get('tags')
+
+        print("Ask: ", title, text, tags)
+        
+        return redirect(url_for('index'))
     return render_template('ask.html',
                          members=mock_members,
                          tags=mock_tags,
@@ -125,7 +139,7 @@ def login():
                          tags=mock_tags,
                          user={'is_authenticated': False})
 
-@app.route('/signup')
+@app.route('/signup', methods=['GET', 'POST'])
 def signup():
     login = request.args.get("login")
     email = request.args.get("email")
@@ -147,3 +161,34 @@ def signup():
                          members=mock_members,
                          tags=mock_tags,
                          user={'is_authenticated': False})
+
+@app.route('/question/<int:question_id>/vote', methods=['POST'])
+def vote_question(question_id):
+    vote_type = request.form.get('vote_type')
+    
+    for question in mock_questions:
+        if question['id'] == question_id:
+            if vote_type in ['up', 'up_a']:
+                question['likes'] += 1
+            elif vote_type in ['down', 'down_a']:
+                question['likes'] -= 1
+            break
+    
+    if vote_type[-1] != 'a':
+        return redirect(url_for('index'))
+    
+    return redirect(url_for('question', question_id=question_id))
+
+@app.route('/answers/<int:answer_id>/vote', methods=['POST'])
+def vote_answer(answer_id):
+    vote_type = request.form.get('vote_type')
+    
+    for answer in mock_answers:
+        if answer['id'] == answer_id:
+            if vote_type == 'up':
+                answer['likes'] += 1
+            elif vote_type == 'down':
+                answer['likes'] -= 1
+            break
+    
+    return redirect(url_for('question', question_id=answer['question_id']))

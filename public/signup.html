@@ -18,7 +18,13 @@
         {% endif %}
     {% endwith %}
 
-    <form class="auth-form">
+    {% if error %}
+        <div class="error-message">
+            {{ error }}
+        </div>
+    {% endif %}
+
+    <form class="auth-form" method="POST" enctype="multipart/form-data">
         <div class="form-group">
             <label for="login" class="form-label">Login</label>
             <input type="text" 
@@ -85,12 +91,11 @@
             </div>
             <div class="form-hint">Choose your profile picture</div>
         </div>
-
-        <button type="submit" class="auth-button">Register!</button>
-        
-        <div class="auth-link">
-            <a href="{{ url_for('login') }}">already have account</a>
-        </div>
     </form>
+    <button type="submit" class="auth-button">Register!</button>
+
+    <div class="auth-link">
+        <a href="{{ url_for('login') }}">already have account</a>
+    </div>
 </div>
 {% endblock %}

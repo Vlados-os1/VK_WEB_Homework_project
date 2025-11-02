@@ -9,6 +9,19 @@
 {% block content %}
 <div class="question-item detailed">
     <div class="question-header">
+        <div class="question-voting">
+            <form method="POST" action="{{ url_for('vote_question', question_id=question.id) }}" style="display: inline;">
+                <input type="hidden" name="vote_type" value="up_a">
+                <button type="submit" class="vote-btn vote-up">▲</button>
+            </form>
+            
+            <span class="vote-count">{{ question.likes }}</span>
+            
+            <form method="POST" action="{{ url_for('vote_question', question_id=question.id) }}" style="display: inline;">
+                <input type="hidden" name="vote_type" value="down_a">
+                <button type="submit" class="vote-btn vote-down">▼</button>
+            </form>
+        </div>
         <img src="{{ url_for('static', filename='Ask_avatar.png') }}" alt="User Avatar" class="question-avatar">
         <div class="question-info">
             <h1 class="question-title">{{ question.title }}</h1>
@@ -34,6 +47,19 @@
     {% for answer in answers %}
     <div class="answer-item {% if answer.is_correct %}correct-answer{% endif %}">
         <div class="answer-header">
+            <div class="answer-voting">
+                <form method="POST" action="{{ url_for('vote_answer', answer_id=answer.id) }}" style="display: inline;">
+                    <input type="hidden" name="vote_type" value="up">
+                    <button type="submit" class="vote-btn vote-up">▲</button>
+                </form>
+                
+                <span class="vote-count">{{ answer.likes }}</span>
+                
+                <form method="POST" action="{{ url_for('vote_answer', answer_id=answer.id) }}" style="display: inline;">
+                    <input type="hidden" name="vote_type" value="down">
+                    <button type="submit" class="vote-btn vote-down">▼</button>
+                </form>
+            </div>
             <img src="{{ url_for('static', filename='Ask_avatar.png') }}" alt="User Avatar" class="answer-avatar">
             <div class="answer-info">
                 <span class="answer-author">{{ answer.author }}</span>
@@ -51,6 +77,14 @@
         </div>
     </div>
     {% endfor %}
+</div>
+
+<div class="answer-form-section">
+    <h3 class="form-title">Enter your answer here..</h3>
+    <form class="answer-form">
+        <textarea class="answer-textarea" name="content" placeholder="Your answer..."></textarea>
+        <button type="button" class="submit-button">Answer</button>
+    </form>
 </div>
 
 {% endblock %}

@@ -12,6 +12,19 @@
     {% for question in questions %}
     <div class="question-item">
         <div class="question-header">
+            <div class="question-voting">
+                <form method="POST" action="{{ url_for('vote_question', question_id=question.id) }}" style="display: inline;">
+                    <input type="hidden" name="vote_type" value="up">
+                    <button type="submit" class="vote-btn vote-up">▲</button>
+                </form>
+                
+                <span class="vote-count">{{ question.likes }}</span>
+                
+                <form method="POST" action="{{ url_for('vote_question', question_id=question.id) }}" style="display: inline;">
+                    <input type="hidden" name="vote_type" value="down">
+                    <button type="submit" class="vote-btn vote-down">▼</button>
+                </form>
+            </div>
             <img src="{{ url_for('static', filename='Ask_avatar.png') }}" alt="User Avatar" class="question-avatar">
             <div class="question-info">
                 <a href="{{ url_for('question', question_id=question.id) }}" class="question-title">{{ question.title }}</a>
