@@ -1,0 +1,88 @@
+.auth-section {
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+.auth-title {
+    text-align: center;
+    font-size: 24px;
+    margin-bottom: 25px;
+    color: #333;
+}
+
+.auth-form {
+    background: #f8f9fa;
+    padding: 25px;
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+}
+
+.form-group {
+    margin-bottom: 18px;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: bold;
+    color: #333;
+}
+
+.form-input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.auth-button {
+    width: 100%;
+    padding: 12px;
+    background: #4a6fa5;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-bottom: 15px;
+}
+
+.auth-link {
+    text-align: center;
+}
+
+.auth-link a {
+    color: #4a6fa5;
+    text-decoration: none;
+}
+
+.error-message {
+    background: #ff6b6b;
+    color: white;
+    padding: 12px;
+    border-radius: 4px;
+    margin-bottom: 18px;
+    text-align: center;
+    font-weight: bold;
+}
+
+.file-upload-wrapper {
+    display: block;
+}
+
+.file-input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 14px;
+    background: white;
+}
+
+.form-hint {
+    font-size: 12px;
+    color: #666;
+    margin-top: 5px;
+}

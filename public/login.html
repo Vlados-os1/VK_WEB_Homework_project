@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Log In - AskPupkin{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='auth.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="auth-section">
+    <h1 class="auth-title">Log In</h1>
+    
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <div class="error-message">
+                {{ messages[0] }}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    {% if error %}
+        <div class="error-message">
+            {{ error }}
+        </div>
+    {% endif %}
+    
+    <form class="auth-form">
+        <div class="form-group">
+            <label for="login" class="form-label">Login</label>
+            <input type="text" 
+                   id="login" 
+                   name="login"
+                   class="form-input"
+                   placeholder="Enter your login here"
+                   maxlength="30"
+                   value="{{ request.args.login if request.args.login else '' }}"
+                   required>
+        </div>
+
+        <div class="form-group">
+            <label for="password" class="form-label">Password</label>
+            <input type="password" 
+                   id="password" 
+                   name="password"
+                   class="form-input"
+                   placeholder="Enter your password"
+                   maxlength="30"
+                   value="{{ request.args.password if request.args.password else '' }}"
+                   required>
+        </div>
+    </form>
+    <button type="submit" class="auth-button">Log in!</button>
+
+    <div class="auth-link">
+        <a href="{{ url_for('signup') }}">create new account</a>
+    </div>
+</div>
+{% endblock %}
