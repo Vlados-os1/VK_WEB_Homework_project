@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}AskPupkin - Вопросы и ответы{% endblock %}</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='base.css') }}">
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
     {% block extra_css %}{% endblock %}
 </head>
 
@@ -13,29 +14,30 @@
         <div class="container">
             <div class="header-top">
                 <div class="logo">
-                    <a href="{{ url_for('index') }}" class="logo-link">AskPupkin</a>
+                    <a href="{% url 'app:index' %}" class="logo-link">AskPupkin</a>
                 </div>
-                
+
                 <div class="search">
                     <form class="search-form">
                         <input type="text" class="search-input" placeholder="Search">
                         <button type="submit" class="search-button">ASK!</button>
                     </form>
                 </div>
-                
+
                 <div class="user-block">
                     <div class="user-info">
-                        {% if user and user.is_authenticated %}
-                            <img src="{{ url_for('static', filename='My_avatar.png') }}" alt="Avatar" class="user-avatar">
+                        {% if user.is_authenticated %}
+                            <img src="{% static 'img/My_avatar.png' %}" alt="User Avatar" class="question-avatar">
+                        
                             <span class="user-name">{{ user.username }}</span>
                             <div class="user-menu">
                                 <a href="#" class="user-menu-item">settings</a>
-                                <a href="#" class="user-menu-item">log out</a>
+                                <a href="{% url 'app:logout' %}" class="user-menu-item">log out</a>
                             </div>
                         {% else %}
                             <div class="user-menu">
-                                <a href="{{ url_for('login') }}" class="user-menu-item">log in</a>
-                                <a href="{{ url_for('signup') }}" class="user-menu-item">register</a>
+                                <a href="{% url 'app:login' %}" class="user-menu-item">log in</a>
+                                <a href="{% url 'app:signup' %}" class="user-menu-item">register</a>
                             </div>
                         {% endif %}
                     </div>
@@ -57,7 +59,7 @@
                         <h3 class="sidebar-title">Popular Tags</h3>
                         <div class="tags-cloud">
                             {% for tag in tags %}
-                                <a href="#" class="tag tag-popular">{{ tag }}</a>
+                                <a href="{% url 'app:tag' tag %}" class="tag tag-popular">{{ tag }}</a>
                             {% endfor %}
                         </div>
                     </div>
@@ -82,13 +84,13 @@
                     <h4 class="footer-title">About AskPupkin</h4>
                     <p class="footer-text">AskPupkin - это платформа для вопросов и ответов, где вы можете найти решения для своих проблем или помочь другим.</p>
                 </div>
-                
+
                 <div class="footer-section">
                     <h4 class="footer-title">Quick Links</h4>
                     <ul class="footer-links">
-                        <li><a href="{{ url_for('index') }}">Home</a></li>
-                        <li><a href="{{ url_for('index') }}">Popular Questions</a></li>
-                        <li><a href="{{ url_for('ask_question') }}">Ask Question</a></li>
+                        <li><a href="{% url 'app:index' %}">Home</a></li>
+                        <li><a href="{% url 'app:hot' %}">Popular Questions</a></li>
+                        <li><a href="{% url 'app:ask' %}">Ask Question</a></li>
                     </ul>
                 </div>
                 
