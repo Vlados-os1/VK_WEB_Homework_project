@@ -13,7 +13,7 @@
         <div class="question-voting">
             <form method="POST" action="{% url 'app:vote_question' question.id %}">
                 {% csrf_token %}
-                <input type="hidden" name="vote_type" value="up">
+                <input type="hidden" name="vote_type" value="up_a">
                 <button type="submit" class="vote-btn vote-up">▲</button>
             </form>
 
@@ -21,7 +21,7 @@
 
             <form method="POST" action="{% url 'app:vote_question' question.id %}">
                 {% csrf_token %}
-                <input type="hidden" name="vote_type" value="down">
+                <input type="hidden" name="vote_type" value="down_a">
                 <button type="submit" class="vote-btn vote-down">▼</button>
             </form>
         </div>

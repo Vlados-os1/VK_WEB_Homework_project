@@ -147,6 +147,24 @@ def ask_question_view(request):
 
     return render(request, 'ask.html', context)
 
+def settings_view(request):
+    context = get_base_context()
+
+    if request.method == 'POST':
+        login = request.POST.get("login")
+        email = request.POST.get("email")
+        nickname = request.POST.get("nickname")
+
+        if any([login, email, nickname]):
+            if email == "example@mail.ru":
+                messages.error(request, "Sorry, this email address already registered!")
+                return render(request, 'settings.html', context)
+            else:
+                context['user']['username'] = nickname
+                return redirect('app:index')
+
+    return render(request, 'settings.html', context)
+
 
 def login_view(request):
     context = get_base_context()

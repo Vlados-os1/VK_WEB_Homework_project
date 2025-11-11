@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Settings - AskPupkin{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/settings.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="settings-section">
+    <h1 class="settings-title">Settings: Dr. Pepper</h1>
+
+    {% if messages %}
+        <div class="success-message">
+            {% for message in messages %}
+                {{ message }}
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <form class="settings-form" method="POST" action="{% url 'app:settings' %}" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <div class="form-group">
+            <label for="login" class="form-label">Login</label>
+            <input type="text"
+                   id="login"
+                   name="login"
+                   class="form-input"
+                   value="dr_pepper"
+                   maxlength="30"
+                   required>
+        </div>
+
+        <div class="form-group">
+            <label for="email" class="form-label">Email</label>
+            <input type="email"
+                   id="email"
+                   name="email"
+                   class="form-input"
+                   value="drpepper@mail.ru"
+                   maxlength="50"
+                   required>
+        </div>
+
+        <div class="form-group">
+            <label for="nickname" class="form-label">NickName</label>
+            <input type="text"
+                   id="nickname"
+                   name="nickname"
+                   class="form-input"
+                   value="Dr. Pepper"
+                   maxlength="30"
+                   required>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Upload avatar</label>
+            <div class="avatar-upload">
+                <div class="avatar-preview">
+                    <img src="{% static 'img/My_avatar.png' %}" alt="Current avatar" class="current-avatar">
+                    <span class="avatar-text">avatar</span>
+                </div>
+                <div class="avatar-controls">
+                    <span class="avatar-path">c:\avatar.jpg</span>
+                    <input type="file" id="avatar" name="avatar" class="avatar-file-input" accept="image/*">
+                    <label for="avatar" class="avatar-choose-btn">choose</label>
+                </div>
+            </div>
+        </div>
+
+        <button type="submit" class="settings-button">Save</button>
+    </form>
+</div>
+{% endblock %}
+
+{% block sidebar %}
+<div class="sidebar-block">
+    <h3 class="sidebar-title">Popular Tags</h3>
+    <div class="tags-cloud">
+        <a href="#" class="tag tag-popular">perl</a>
+        <a href="#" class="tag tag-popular">python</a>
+        <a href="#" class="tag tag-popular">TechnoPark</a>
+        <a href="#" class="tag tag-popular">MySQL</a>
+        <a href="#" class="tag tag-popular">django</a>
+        <a href="#" class="tag tag-popular">Mail.Ru</a>
+        <a href="#" class="tag tag-popular">Voloshin</a>
+        <a href="#" class="tag tag-popular">Firefox</a>
+    </div>
+</div>
+
+<div class="sidebar-block">
+    <h3 class="sidebar-title">Best Members</h3>
+    <ul class="members-list">
+        <li class="member-item"><a href="#">Mr. Freeman</a></li>
+        <li class="member-item"><a href="#">Dr. House</a></li>
+        <li class="member-item"><a href="#">Bender</a></li>
+        <li class="member-item"><a href="#">Queen Victoria</a></li>
+        <li class="member-item"><a href="#">V. Pupkin</a></li>
+    </ul>
+</div>
+{% endblock %}
