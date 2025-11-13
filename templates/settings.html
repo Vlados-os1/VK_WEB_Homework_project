@@ -9,7 +9,7 @@
 
 {% block content %}
 <div class="settings-section">
-    <h1 class="settings-title">Settings: Dr. Pepper</h1>
+    <h1 class="settings-title">Settings: {{ user.username }}</h1>
 
     {% if messages %}
         <div class="success-message">
@@ -28,7 +28,7 @@
                    id="login"
                    name="login"
                    class="form-input"
-                   value="dr_pepper"
+                   value="{{ user.username }}"
                    maxlength="30"
                    required>
         </div>
@@ -39,7 +39,7 @@
                    id="email"
                    name="email"
                    class="form-input"
-                   value="drpepper@mail.ru"
+                   value="{{ user.email }}"
                    maxlength="50"
                    required>
         </div>
@@ -50,7 +50,7 @@
                    id="nickname"
                    name="nickname"
                    class="form-input"
-                   value="Dr. Pepper"
+                   value="{% if user_profile %}{{ user_profile.nickname }}{% else %}{{ user.username }}{% endif %}"
                    maxlength="30"
                    required>
         </div>

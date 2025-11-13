@@ -1,54 +1,17 @@
 import random
 
+from django.views.generic import TemplateView
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
-from django.shortcuts import render, redirect
+from django.shortcuts import redirect, get_object_or_404
 from django.http import HttpRequest, HttpResponse
-from django.contrib import messages
+from django.contrib import messages, auth
 from django.conf import settings
+from django.db.models import Count, Q
+from django.contrib.auth.models import User
+from django.contrib.auth.decorators import login_required
+from django.utils.decorators import method_decorator
 
-mock_members = [
-    'Mr. Freeman',
-    'Dr. House',
-    'Bender',
-    'Queen Victoria',
-    'V. Pupkin'
-]
-
-mock_tags = [
-    'perl', 'python', 'TechnoPark', 'MySQL', 'django',
-    'Mail.Ru', 'Voloshin', 'Firefox', 'black-jack'
-]
-
-mock_questions = [
-    {
-        'id': i,
-        'title': f'How to build a moon park? #{i}',
-        'content': 'Guys, i have trouble with a moon park. Can\'t find th black-jack...',
-        'author': 'SpaceExplorer',
-        'answers_count': 3,
-        'tags': random.sample(mock_tags, 2),
-        'likes': random.randint(0, 20)
-    } for i in range(1, 20)]
-
-mock_answers = [
-    {
-        'id': j,
-        'question_id': i,
-        'content': f'First of all I would like to thank you for the invitation to participate in such a discussion about moon park #{i}. This is answer #{j} to your question.',
-        'author': author,
-        'is_correct': j == 1,
-        'likes': random.randint(0, 15),
-        'created_at': f'{random.randint(1, 24)} hours ago'
-    }
-    for i in range(1, 20)
-    for j, author in enumerate([
-        'Mr. Freeman',
-        'Dr. House',
-        'Bender',
-        'Elon Musk',
-        'Neil Armstrong'
-    ][:3], 1)
-]
+from app.models import Question, Answer, Tag, QuestionLike, AnswerLike, UserProfile
 
 def paginate(objects_list, request: HttpRequest, per_page=3):
     paginator = Paginator(objects_list, per_page)
@@ -63,191 +26,315 @@ def paginate(objects_list, request: HttpRequest, per_page=3):
 
     return page
 
-base_context = {
-        'members': mock_members,
-        'tags': mock_tags,
-        'user': {'is_authenticated': False, 'username': 'Dr. Pepper'},
-        'USER_FILES_URL': settings.USER_FILES_URL,
-    }
+class BaseView(TemplateView):
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
 
-def get_base_context():
-    return base_context
+        popular_tags = Tag.objects.annotate(
+            question_count=Count('question')
+        ).order_by('-question_count')[:10]
 
-def index_view(request):
-    context = get_base_context()
+        best_members = UserProfile.objects.annotate(
+            answer_count=Count('user__answer'),
+            question_count=Count('user__user_posts')
+        ).order_by('-answer_count', '-question_count')[:5]
 
-    page = paginate(mock_questions, request, 3)
-    context['page'] = page
-    context['questions'] = page.object_list
-
-    return render(request, 'index.html', context)
-
-
-def hot_questions_view(request):
-    hot_questions = sorted(mock_questions, key=lambda x: x['likes'], reverse=True)
-    hot_questions = [i for i in hot_questions if i['likes'] > 15]
-
-    context = get_base_context()
-    page = paginate(hot_questions, request, 3)
-    context['page'] = page
-    context['questions'] = page.object_list
-
-    return render(request, 'index.html', context)
+        context.update({
+            'members': [member.nickname for member in best_members],
+            'tags': [tag.name for tag in popular_tags],
+            'user': {
+                'is_authenticated': self.request.user.is_authenticated,
+                'username': self.request.user.username if self.request.user.is_authenticated else 'Guest'
+            },
+            'USER_FILES_URL': settings.USER_FILES_URL,
+        })
+        return context
 
 
-def tag_questions_view(request, tag_name):
-    filtered_questions = [q for q in mock_questions if tag_name in q['tags']]
+class IndexView(BaseView):
+    template_name = 'index.html'
 
-    context = get_base_context()
-    context['tag_name'] = tag_name
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
 
-    page = paginate(filtered_questions, request, 3)
-    context['page'] = page
-    context['questions'] = page.object_list
+        questions = Question.objects.new_questions()
 
-    return render(request, 'index.html', context)
+        page = paginate(questions, self.request, 3)
+        context['page'] = page
+        context['questions'] = page.object_list
 
-
-def question_detail_view(request, question_id):
-    question_data = next((q for q in mock_questions if q['id'] == question_id), None)
-    if not question_data:
-        return HttpResponse("Question not found", status=404)
-
-    question_answers = [a for a in mock_answers if a['question_id'] == question_id]
-
-    context = get_base_context()
-    context['question'] = question_data
-    context['answers'] = question_answers
-
-    return render(request, 'question.html', context)
+        return context
 
 
-def ask_question_view(request):
-    context = get_base_context()
+class HotQuestionsView(BaseView):
+    template_name = 'index.html'
 
-    if request.method == 'POST':
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        questions = Question.objects.best_questions()
+
+        page = paginate(questions, self.request, 3)
+        context['page'] = page
+        context['questions'] = page.object_list
+
+        return context
+
+
+class TagQuestionsView(BaseView):
+    template_name = 'index.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        tag_name = kwargs.get('tag_name')
+        context['tag_name'] = tag_name
+
+        questions = Question.objects.with_tags([tag_name])
+
+        page = paginate(questions, self.request, 3)
+        context['page'] = page
+        context['questions'] = page.object_list
+
+        return context
+
+
+class QuestionDetailView(BaseView):
+    template_name = 'question.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        question_id = kwargs.get('question_id')
+        question = get_object_or_404(Question, id=question_id)
+
+        answers = Answer.objects.best_answers(question_id=question_id)
+
+        page = paginate(answers, self.request, 4)
+        context['page'] = page
+        context['answers'] = page.object_list
+        context['answers_count'] = answers.count()
+        context['question'] = question
+
+        if self.request.user.is_authenticated:
+            context['user_liked_question'] = QuestionLike.objects.filter(
+                question=question, user=self.request.user
+            ).exists()
+
+        return context
+
+
+class AskQuestionView(BaseView):
+    template_name = 'ask.html'
+
+    @method_decorator(login_required)
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        return context
+
+    def post(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('app:login')
+
         title = request.POST.get('title')
         text = request.POST.get('text')
-        tags = request.POST.get('tags')
+        tags_input = request.POST.get('tags')
 
-        print("Ask: ", title, text, tags)
+        if title and text:
+            question = Question.objects.create(
+                title=title,
+                content=text,
+                author=request.user
+            )
 
-        new_question = {
-            'id': len(mock_questions) + 1,
-            'title': title,
-            'content': text,
-            'author': context['user']['username'],
-            'answers_count': 0,
-            'tags': [tag.strip() for tag in tags.split(',')] if tags else [],
-            'likes': 0
-        }
-        mock_questions.insert(0, new_question)
+            if tags_input:
+                tag_names = [tag.strip() for tag in tags_input.split(',')]
+                for tag_name in tag_names:
+                    tag, created = Tag.objects.get_or_create(name=tag_name)
+                    question.tags.add(tag)
 
-        return redirect('app:index')
+            return redirect('app:question', question_id=question.id)
 
-    return render(request, 'ask.html', context)
+        messages.error(request, "Please fill all required fields")
+        return self.render_to_response(self.get_context_data())
 
-def settings_view(request):
-    context = get_base_context()
 
-    if request.method == 'POST':
+class SettingsView(BaseView):
+    template_name = 'settings.html'
+
+    @method_decorator(login_required)
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        try:
+            user_profile = UserProfile.objects.get(user=self.request.user)
+            context['user_profile'] = user_profile
+        except UserProfile.DoesNotExist:
+            context['user_profile'] = None
+
+        return context
+
+    def post(self, request, *args, **kwargs):
         login = request.POST.get("login")
         email = request.POST.get("email")
         nickname = request.POST.get("nickname")
 
         if any([login, email, nickname]):
-            if email == "example@mail.ru":
+            if email and UserProfile.objects.filter(email=email).exclude(id=request.user.id).exists():
                 messages.error(request, "Sorry, this email address already registered!")
-                return render(request, 'settings.html', context)
-            else:
-                context['user']['username'] = nickname
-                return redirect('app:index')
+                return self.render_to_response(self.get_context_data())
 
-    return render(request, 'settings.html', context)
+            if email:
+                request.user.email = email
+            if login:
+                request.user.username = login
+            request.user.save()
+
+            user_profile, created = UserProfile.objects.get_or_create(user=request.user)
+            if nickname:
+                user_profile.nickname = nickname
+            if login:
+                user_profile.login = login
+            user_profile.save()
+
+            messages.success(request, "Settings updated successfully!")
+            return redirect('app:index')
+
+        return self.render_to_response(self.get_context_data())
 
 
-def login_view(request):
-    context = get_base_context()
+class LoginView(BaseView):
+    template_name = 'login.html'
 
-    if request.method == 'POST':
-        login = request.POST.get("login")
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        return context
+
+    def post(self, request, *args, **kwargs):
+        username = request.POST.get("login")
         password = request.POST.get("password")
 
-        if login and password:
+        if username and password:
             if password != "123":
                 messages.error(request, "Invalid password! Try '123'.")
                 return redirect('app:login')
             else:
-                context['user']['is_authenticated'] = True
-                context['user']['username'] = login
-                return redirect('app:index')
+                users = UserProfile.objects.all()
+                if users.exists():
+                    random_user = random.choice(users)
+                    auth.login(request, random_user.user)
+                    return redirect('app:index')
+                else:
+                    messages.error(request, "No users available.")
+                    return redirect('app:login')
 
-    return render(request, 'login.html', context)
+        messages.error(request, "Please fill all fields")
+        return self.render_to_response(self.get_context_data())
 
 
-def signup_view(request):
-    context = get_base_context()
+class SignupView(BaseView):
+    template_name = 'signup.html'
 
-    if request.method == 'POST':
-        login = request.POST.get("login")
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        return context
+
+    def post(self, request, *args, **kwargs):
+        username = request.POST.get("login")
         email = request.POST.get("email")
         nickname = request.POST.get("nickname")
         password = request.POST.get("password")
         repeat_password = request.POST.get("repeat_password")
 
-        if any([login, email, nickname, password, repeat_password]):
-            if email == "example@mail.ru":
-                messages.error(request, "Sorry, this email address already registered!")
-                return render(request, 'signup.html', context)
-            else:
-                context['user']['is_authenticated'] = True
-                context['user']['username'] = login
-                return redirect('app:index')
+        if all([username, email, password, repeat_password]):
+            if password != repeat_password:
+                messages.error(request, "Passwords don't match!")
+                return self.render_to_response(self.get_context_data())
 
-    return render(request, 'signup.html', context)
+            if User.objects.filter(username=username).exists():
+                messages.error(request, "Username already exists!")
+                return self.render_to_response(self.get_context_data())
+
+            if User.objects.filter(email=email).exists():
+                messages.error(request, "Email already registered!")
+                return self.render_to_response(self.get_context_data())
+
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                password=password
+            )
+
+            UserProfile.objects.create(
+                user=user,
+                login=username,
+                nickname=nickname or username
+            )
+
+            auth.login(request, user)
+            return redirect('app:index')
+
+        messages.error(request, "Please fill all required fields")
+        return self.render_to_response(self.get_context_data())
 
 
-def vote_question_view(request, question_id):
-    if request.method == 'POST':
+class VoteQuestionView(BaseView):
+
+    @method_decorator(login_required)
+    def post(self, request, *args, **kwargs):
+        question_id = kwargs.get('question_id')
         vote_type = request.POST.get('vote_type')
 
-        for question in mock_questions:
-            if question['id'] == question_id:
-                if vote_type in ['up', 'up_a']:
-                    question['likes'] += 1
-                elif vote_type in ['down', 'down_a']:
-                    question['likes'] -= 1
-                break
+        question = get_object_or_404(Question, id=question_id)
+
+        existing_like = QuestionLike.objects.filter(
+            question=question, user=request.user
+        ).first()
+
+        if vote_type in ['up', 'up_a']:
+            if not existing_like:
+                QuestionLike.objects.create(question=question, user=request.user)
+        elif vote_type in ['down', 'down_a']:
+            if existing_like:
+                existing_like.delete()
 
         if vote_type and vote_type[-1] != 'a':
             return redirect('app:index')
 
         return redirect('app:question', question_id=question_id)
 
-    return redirect('app:index')
 
+class VoteAnswerView(BaseView):
 
-def vote_answer_view(request, answer_id):
-    if request.method == 'POST':
+    @method_decorator(login_required)
+    def post(self, request, *args, **kwargs):
+        answer_id = kwargs.get('answer_id')
         vote_type = request.POST.get('vote_type')
-        question_id = None
 
-        for answer in mock_answers:
-            if answer['id'] == answer_id:
-                if vote_type == 'up':
-                    answer['likes'] += 1
-                elif vote_type == 'down':
-                    answer['likes'] -= 1
-                question_id = answer['question_id']
-                break
+        answer = get_object_or_404(Answer, id=answer_id)
+        question_id = answer.question.id
 
-        if question_id:
-            return redirect('app:question', question_id=question_id)
+        existing_like = AnswerLike.objects.filter(
+            answer=answer, user=request.user
+        ).first()
 
-    return redirect('app:index')
+        if vote_type == 'up':
+            if not existing_like:
+                AnswerLike.objects.create(answer=answer, user=request.user)
+        elif vote_type == 'down':
+            if existing_like:
+                existing_like.delete()
+
+        return redirect('app:question', question_id=question_id)
 
 
-def logout_view(request):
-    context = get_base_context()
-    context['user']['is_authenticated'] = False
-    return render(request, 'index.html', context)
+class LogoutView(BaseView):
+    def get(self, request, *args, **kwargs):
+        auth.logout(request)
+        return redirect('app:index')

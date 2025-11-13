@@ -20,7 +20,7 @@
                     <button type="submit" class="vote-btn vote-up">▲</button>
                 </form>
 
-                <span class="vote-count">{{ question.likes }}</span>
+                <span class="vote-count">{{ question.questionlike_set.count }}</span>
 
                 <form method="POST" action="{% url 'app:vote_question' question.id %}">
                     {% csrf_token %}
@@ -37,11 +37,11 @@
             <p>{{ question.content }}</p>
         </div>
         <div class="question-meta">
-            <a href="{% url 'app:question' question.id %}" class="answers-count">answer ({{ question.answers_count }})</a>
+            <a href="{% url 'app:question' question.id %}" class="answers-count">answer ({{ question.questions.count }})</a>
             <div class="question-tags">
                 <span class="tags-label">Tags:</span>
-                {% for tag in question.tags %}
-                <a href="{% url 'app:tag' tag %}" class="tag">{{ tag }}</a>
+                {% for tag in question.tags.all %}
+                <a href="{% url 'app:tag' tag.name %}" class="tag">{{ tag.name }}</a>
                 {% endfor %}
             </div>
         </div>
@@ -49,7 +49,7 @@
     {% endfor %}
 </div>
 
-{% if page %}
+{% if page and page.paginator.num_pages > 1 %}
     {% include 'pagination.html' with page=page %}
 {% endif %}
 

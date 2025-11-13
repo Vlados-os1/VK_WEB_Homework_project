@@ -17,7 +17,7 @@
                 <button type="submit" class="vote-btn vote-up">▲</button>
             </form>
 
-            <span class="vote-count">{{ question.likes }}</span>
+            <span class="vote-count">{{ question.questionlike_set.count }}</span>
 
             <form method="POST" action="{% url 'app:vote_question' question.id %}">
                 {% csrf_token %}
@@ -28,7 +28,7 @@
         <img src="{% static '/img/Ask_avatar.png' %}" alt="User Avatar" class="question-avatar">
         <div class="question-info">
             <h1 class="question-title">{{ question.title }}</h1>
-            <span class="question-author">by {{ question.author }}</span>
+            <span class="question-author">by {{ question.author.username }}</span>
         </div>
     </div>
     <div class="question-content">
@@ -37,8 +37,8 @@
     <div class="question-meta">
         <div class="question-tags">
             <span class="tags-label">Tags:</span>
-            {% for tag in question.tags %}
-            <a href="{% url 'app:tag' tag %}" class="tag">{{ tag }}</a>
+            {% for tag in question.tags.all %}
+            <a href="{% url 'app:tag' tag.name %}" class="tag">{{ tag.name }}</a>
             {% endfor %}
         </div>
     </div>
@@ -48,7 +48,7 @@
     <h2 class="answers-title">Answers ({{ answers|length }})</h2>
 
     {% for answer in answers %}
-    <div class="answer-item {% if answer.is_correct %}correct-answer{% endif %}">
+    <div class="answer-item">
         <div class="answer-header">
             <div class="answer-voting">
                 <form method="POST" action="{% url 'app:vote_answer' answer.id %}">
@@ -57,7 +57,7 @@
                     <button type="submit" class="vote-btn vote-up">▲</button>
                 </form>
 
-                <span class="vote-count">{{ answer.likes }}</span>
+                <span class="vote-count">{{ answer.answerlike_set.count }}</span>
 
                 <form method="POST" action="{% url 'app:vote_answer' answer.id %}">
                     {% csrf_token %}
@@ -67,14 +67,8 @@
             </div>
             <img src="{% static '/img/Ask_avatar.png' %}" alt="User Avatar" class="answer-avatar">
             <div class="answer-info">
-                <span class="answer-author">{{ answer.author }}</span>
-                <span class="answer-date">{{ answer.created_at }}</span>
-            </div>
-            <div class="answer-correct">
-                <label class="correct-checkbox">
-                    <input type="checkbox" class="correct-input">
-                    <span class="correct-mark">Correct!</span>
-                </label>
+                <span class="answer-author">{{ answer.author.username }}</span>
+                <span class="answer-date">{{ answer.created_at|date:"M d, Y H:i" }}</span>
             </div>
         </div>
         <div class="answer-content">
@@ -84,11 +78,22 @@
     {% endfor %}
 </div>
 
+{% if user.is_authenticated %}
 <div class="answer-form-section">
     <h3 class="form-title">Enter your answer here...</h3>
-    <form class="answer-form">
-        <textarea class="answer-textarea" name="content" placeholder="Your answer..."></textarea>
-        <button type="button" class="submit-button">Answer</button>
+    <form class="answer-form" method="GET" action="{% url 'app:question' question.id %}">
+        <textarea class="answer-textarea" name="content" placeholder="Your answer..." required></textarea>
+        <button type="submit" class="submit-button">Answer</button>
     </form>
 </div>
+{% else %}
+<div class="login-prompt">
+    <p>Please <a href="{% url 'app:login' %}">log in</a> to post an answer.</p>
+</div>
+{% endif %}
+
+{% if page and page.paginator.num_pages > 1 %}
+    {% include 'pagination.html' with page=page %}
+{% endif %}
+
 {% endblock %}
