@@ -9,11 +9,14 @@ PROJECT_NAME = "ask_pupkin"
 config = ConfigParser(interpolation=ExtendedInterpolation())
 config.read(BASE_DIR / 'prod.conf')
 
-SECRET_KEY = config.get("secret", "SECRET_KEY", fallback="!seret_key!")
+SECRET_KEY = config.get("secret", "SECRET_KEY", fallback="!secret_key!")
 
 DEBUG = config.getboolean("common", "DEBUG", fallback=False)
 
-ALLOWED_HOSTS = []
+if DEBUG:
+    ALLOWED_HOSTS = ['localhost', '127.0.0.1', '127.0.8.1']
+else:
+    ALLOWED_HOSTS = config.get("common", "ALLOWED_HOSTS", fallback="localhost,127.0.0.1").split(",")
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -60,8 +63,12 @@ WSGI_APPLICATION = 'ask_pupkin.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': config.get('database', 'ENGINE', fallback='django.db.backends.postgresql'),
+        'NAME': config.get('database', 'NAME'),
+        'USER': config.get('database', 'USER'),
+        'PASSWORD': config.get('database', 'PASSWORD'),
+        'HOST': config.get('database', 'HOST', fallback='127.0.0.1'),
+        'PORT': config.getint('database', 'PORT', fallback=5432),
     }
 }
 
@@ -90,11 +97,17 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
-STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'static')
-]
+if DEBUG:
+    STATICFILES_DIRS = [
+        os.path.join(BASE_DIR, 'static')
+    ]
+else:
+    STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
 USER_FILES_URL = '/uploads/'
 USER_FILES_ROOT = os.path.join(BASE_DIR, 'uploads')
+
+MEDIA_URL = '/uploads/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'uploads')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
