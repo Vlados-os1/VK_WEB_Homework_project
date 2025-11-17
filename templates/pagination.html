@@ -1,0 +1,29 @@
+<div class="pagination">
+    {% with total_pages=page.paginator.num_pages %}
+        <a href="?page=1" class="page-number {% if page.number == 1 %}active{% endif %}">1</a>
+
+        {% if page.number > 4 %}
+            <span class="page-number-ellipsis">...</span>
+        {% endif %}
+
+        {% for num in page.paginator.page_range %}
+            {% if num >= page.number|add:"-2" and num <= page.number|add:"2" and num > 1 and num < total_pages %}
+                {% if num == page.number %}
+                    <span class="page-number active">{{ num }}</span>
+                {% else %}
+                    <a href="?page={{ num }}" class="page-number">{{ num }}</a>
+                {% endif %}
+            {% endif %}
+        {% endfor %}
+
+        {% if page.number < total_pages|add:"-3" %}
+            <span class="page-number-ellipsis">...</span>
+        {% endif %}
+
+        {% if total_pages > 1 %}
+            <a href="?page={{ total_pages }}" class="page-number {% if page.number == total_pages %}active{% endif %}">
+                {{ total_pages }}
+            </a>
+        {% endif %}
+    {% endwith %}
+</div>

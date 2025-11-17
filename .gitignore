@@ -10,6 +10,7 @@ dist/
 *.egg
 .python-version
 
+prod.conf
 .env
 .venv
 env/

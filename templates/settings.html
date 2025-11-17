@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Settings - AskPupkin{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/settings.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="settings-section">
+    <h1 class="settings-title">Settings: Dr. Pepper</h1>
+
+    {% if messages %}
+        <div class="success-message">
+            {% for message in messages %}
+                {{ message }}
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <form class="settings-form" method="POST" action="{% url 'app:settings' %}" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <div class="form-group">
+            <label for="login" class="form-label">Login</label>
+            <input type="text"
+                   id="login"
+                   name="login"
+                   class="form-input"
+                   value="dr_pepper"
+                   maxlength="30"
+                   required>
+        </div>
+
+        <div class="form-group">
+            <label for="email" class="form-label">Email</label>
+            <input type="email"
+                   id="email"
+                   name="email"
+                   class="form-input"
+                   value="drpepper@mail.ru"
+                   maxlength="50"
+                   required>
+        </div>
+
+        <div class="form-group">
+            <label for="nickname" class="form-label">NickName</label>
+            <input type="text"
+                   id="nickname"
+                   name="nickname"
+                   class="form-input"
+                   value="Dr. Pepper"
+                   maxlength="30"
+                   required>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Upload avatar</label>
+            <div class="avatar-upload">
+                <div class="avatar-preview">
+                    <img src="{% static 'img/My_avatar.png' %}" alt="Current avatar" class="current-avatar">
+                    <span class="avatar-text">avatar</span>
+                </div>
+                <div class="avatar-controls">
+                    <span class="avatar-path">c:\avatar.jpg</span>
+                    <input type="file" id="avatar" name="avatar" class="avatar-file-input" accept="image/*">
+                    <label for="avatar" class="avatar-choose-btn">choose</label>
+                </div>
+            </div>
+        </div>
+
+        <button type="submit" class="settings-button">Save</button>
+    </form>
+</div>
+{% endblock %}
