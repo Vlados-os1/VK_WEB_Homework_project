@@ -1,11 +1,12 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Home - AskPupkin{% endblock %}
 
 {% block content %}
 <div class="questions-nav">
     <h2 class="nav-title">New Questions</h2>
-    <a href="{{ url_for('hot_questions') }}" class="nav-link">Hot Questions</a>
+    <a href="{% url 'app:hot' %}" class="nav-link">Hot Questions</a>
 </div>
 
 <div class="questions-list">
@@ -13,32 +14,34 @@
     <div class="question-item">
         <div class="question-header">
             <div class="question-voting">
-                <form method="POST" action="{{ url_for('vote_question', question_id=question.id) }}" style="display: inline;">
+                <form method="POST" action="{% url 'app:vote_question' question.id %}">
+                    {% csrf_token %}
                     <input type="hidden" name="vote_type" value="up">
                     <button type="submit" class="vote-btn vote-up">▲</button>
                 </form>
-                
+
                 <span class="vote-count">{{ question.likes }}</span>
-                
-                <form method="POST" action="{{ url_for('vote_question', question_id=question.id) }}" style="display: inline;">
+
+                <form method="POST" action="{% url 'app:vote_question' question.id %}">
+                    {% csrf_token %}
                     <input type="hidden" name="vote_type" value="down">
                     <button type="submit" class="vote-btn vote-down">▼</button>
                 </form>
             </div>
-            <img src="{{ url_for('static', filename='Ask_avatar.png') }}" alt="User Avatar" class="question-avatar">
+            <img src="{% static 'img/Ask_avatar.png' %}" alt="User Avatar" class="question-avatar">
             <div class="question-info">
-                <a href="{{ url_for('question', question_id=question.id) }}" class="question-title">{{ question.title }}</a>
+                <a href="{% url 'app:question' question.id %}" class="question-title">{{ question.title }}</a>
             </div>
         </div>
         <div class="question-content">
             <p>{{ question.content }}</p>
         </div>
         <div class="question-meta">
-            <a href="#" class="answers-count">answer ({{ question.answers_count }})</a>
+            <a href="{% url 'app:question' question.id %}" class="answers-count">answer ({{ question.answers_count }})</a>
             <div class="question-tags">
                 <span class="tags-label">Tags:</span>
                 {% for tag in question.tags %}
-                <a href="#" class="tag">{{ tag }}</a>
+                <a href="{% url 'app:tag' tag %}" class="tag">{{ tag }}</a>
                 {% endfor %}
             </div>
         </div>
@@ -46,11 +49,8 @@
     {% endfor %}
 </div>
 
-<div class="pagination">
-    <a href="#" class="page-number active">1</a>
-    <a href="#" class="page-number">2</a>
-    <a href="#" class="page-number">3</a>
-    <span class="page-dots">...</span>
-    <a href="#" class="page-number">53</a>
-</div>
+{% if page %}
+    {% include 'pagination.html' with page=page %}
+{% endif %}
+
 {% endblock %}
