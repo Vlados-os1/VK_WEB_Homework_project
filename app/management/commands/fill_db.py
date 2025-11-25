@@ -70,8 +70,6 @@ class Command(BaseCommand):
         for user in created_users:
             profile = UserProfile(
                 user=user,
-                login=user.username,
-                nickname=f'nickname_{user.username}',
                 avatar=None
             )
             user_profiles.append(profile)

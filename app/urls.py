@@ -16,7 +16,7 @@ urlpatterns = [
     path('signup/', SignupView.as_view(), name='signup'),
     path('settings/', SettingsView.as_view(), name='settings'),
     path('ask/', AskQuestionView.as_view(), name='ask'),
-    path('logout/', LogoutView.as_view(), name='logout'),  # Добавил слеш в конце
+    path('logout/', LogoutView.as_view(), name='logout'),
     path('question/<int:question_id>/vote/', VoteQuestionView.as_view(), name='vote_question'),
-    path('answer/<int:answer_id>/vote/', VoteAnswerView.as_view(), name='vote_answer'),  # Исправил answers -> answer
+    path('answer/<int:answer_id>/vote/', VoteAnswerView.as_view(), name='vote_answer'),
 ]

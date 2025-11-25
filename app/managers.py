@@ -12,7 +12,7 @@ class QuestionManager(DefaultManager):
     def best_questions(self):
         return self.active().annotate(
             likes_count=Count('questionlike', distinct=True),
-            answers_count=Count('questions', distinct=True),
+            answers_count=Count('answers', distinct=True),
             total_rating=models.F('likes_count') + models.F('answers_count')
         ).order_by('-total_rating', '-created_at')
 
@@ -24,32 +24,34 @@ class QuestionManager(DefaultManager):
 
     def hot_questions(self):
         return self.active().annotate(
-            answers_count=Count('questions', distinct=True)
+            answers_count=Count('answers', distinct=True)
         ).order_by('-answers_count', '-created_at')
 
     def unanswered_questions(self):
         return self.active().annotate(
-            answers_count=Count('questions')
+            answers_count=Count('answers')
         ).filter(answers_count=0).order_by('-created_at')
 
     def with_user_activity(self):
         return self.active().annotate(
             likes_count=Count('questionlike'),
-            answers_count=Count('questions'),
+            answers_count=Count('answers'),
             author_name=models.F('author__username')
         )
 
 
-class AnswerManager(DefaultManager):
-    def best_answers(self, question_id=None):
-        queryset = self.annotate(
+class AnswerQuerySet(models.QuerySet):
+    def best_answers(self):
+        return self.annotate(
             likes_count=Count('answerlike')
         ).order_by('-likes_count', '-created_at')
 
-        if question_id:
-            queryset = queryset.filter(question_id=question_id)
+class AnswerManager(DefaultManager):
+    def get_queryset(self):
+        return AnswerQuerySet(self.model, using=self._db)
 
-        return queryset
+    def best_answers(self):
+        return self.get_queryset().best_answers()
 
     def for_question(self, question_id):
         return self.filter(question_id=question_id).order_by('-created_at')

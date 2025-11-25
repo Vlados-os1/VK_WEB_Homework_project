@@ -1,22 +1,18 @@
 from pathlib import Path
-from configparser import ConfigParser, ExtendedInterpolation
+from dotenv import load_dotenv
 import os
+
+load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 PROJECT_NAME = "ask_pupkin"
 
-config = ConfigParser(interpolation=ExtendedInterpolation())
-config.read(BASE_DIR / 'prod.conf')
+SECRET_KEY = os.getenv("SECRET_KEY", "!secret_key!")
 
-SECRET_KEY = config.get("secret", "SECRET_KEY", fallback="!secret_key!")
+DEBUG = os.getenv("DEBUG", "False").lower() == "true"
 
-DEBUG = config.getboolean("common", "DEBUG", fallback=False)
-
-if DEBUG:
-    ALLOWED_HOSTS = ['localhost', '127.0.0.1', '127.0.8.1']
-else:
-    ALLOWED_HOSTS = config.get("common", "ALLOWED_HOSTS", fallback="localhost,127.0.0.1").split(",")
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -63,12 +59,12 @@ WSGI_APPLICATION = 'ask_pupkin.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': config.get('database', 'ENGINE', fallback='django.db.backends.postgresql'),
-        'NAME': config.get('database', 'NAME'),
-        'USER': config.get('database', 'USER'),
-        'PASSWORD': config.get('database', 'PASSWORD'),
-        'HOST': config.get('database', 'HOST', fallback='127.0.0.1'),
-        'PORT': config.getint('database', 'PORT', fallback=5432),
+        'ENGINE': os.getenv('DB_ENGINE', 'django.db.backends.postgresql'),
+        'NAME': os.getenv('DB_NAME', 'ask_pupkin'),
+        'USER': os.getenv('DB_USER', 'postgres'),
+        'PASSWORD': os.getenv('DB_PASSWORD', 'spring20'),
+        'HOST': os.getenv('DB_HOST', 'localhost'),
+        'PORT': os.getenv('DB_PORT', '5432'),
     }
 }
 
@@ -111,3 +107,7 @@ MEDIA_URL = '/uploads/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'uploads')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+LOGIN_URL = '/login/'
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/'

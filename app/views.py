@@ -36,11 +36,11 @@ class BaseView(TemplateView):
 
         best_members = UserProfile.objects.annotate(
             answer_count=Count('user__answer'),
-            question_count=Count('user__user_posts')
+            question_count=Count('user__questions')
         ).order_by('-answer_count', '-question_count')[:5]
 
         context.update({
-            'members': [member.nickname for member in best_members],
+            'members': [member.user for member in best_members],
             'tags': [tag.name for tag in popular_tags],
             'user': {
                 'is_authenticated': self.request.user.is_authenticated,
@@ -53,13 +53,14 @@ class BaseView(TemplateView):
 
 class IndexView(BaseView):
     template_name = 'index.html'
+    paginate_by = 3
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
         questions = Question.objects.new_questions()
 
-        page = paginate(questions, self.request, 3)
+        page = paginate(questions, self.request, self.paginate_by)
         context['page'] = page
         context['questions'] = page.object_list
 
@@ -83,18 +84,20 @@ class HotQuestionsView(BaseView):
 
 class TagQuestionsView(BaseView):
     template_name = 'index.html'
+    paginate_by = 3
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
         tag_name = kwargs.get('tag_name')
-        context['tag_name'] = tag_name
+        tag = get_object_or_404(Tag, name=tag_name)
 
-        questions = Question.objects.with_tags([tag_name])
+        questions = Question.objects.filter(tags=tag)
 
-        page = paginate(questions, self.request, 3)
+        page = paginate(questions, self.request, self.paginate_by)
         context['page'] = page
         context['questions'] = page.object_list
+        context['tag_name'] = tag.name
 
         return context
 
@@ -108,7 +111,7 @@ class QuestionDetailView(BaseView):
         question_id = kwargs.get('question_id')
         question = get_object_or_404(Question, id=question_id)
 
-        answers = Answer.objects.best_answers(question_id=question_id)
+        answers = Answer.objects.filter(question_id=question_id).best_answers()
 
         page = paginate(answers, self.request, 4)
         context['page'] = page
@@ -183,10 +186,9 @@ class SettingsView(BaseView):
     def post(self, request, *args, **kwargs):
         login = request.POST.get("login")
         email = request.POST.get("email")
-        nickname = request.POST.get("nickname")
 
-        if any([login, email, nickname]):
-            if email and UserProfile.objects.filter(email=email).exclude(id=request.user.id).exists():
+        if any([login, email]):
+            if email and User.objects.filter(email=email).exclude(id=request.user.id).exists():
                 messages.error(request, "Sorry, this email address already registered!")
                 return self.render_to_response(self.get_context_data())
 
@@ -197,10 +199,6 @@ class SettingsView(BaseView):
             request.user.save()
 
             user_profile, created = UserProfile.objects.get_or_create(user=request.user)
-            if nickname:
-                user_profile.nickname = nickname
-            if login:
-                user_profile.login = login
             user_profile.save()
 
             messages.success(request, "Settings updated successfully!")
@@ -273,8 +271,6 @@ class SignupView(BaseView):
 
             UserProfile.objects.create(
                 user=user,
-                login=username,
-                nickname=nickname or username
             )
 
             auth.login(request, user)
