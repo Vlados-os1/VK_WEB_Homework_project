@@ -10,7 +10,7 @@ PROJECT_NAME = "ask_pupkin"
 
 SECRET_KEY = os.getenv("SECRET_KEY", "!secret_key!")
 
-DEBUG = os.getenv("DEBUG", "False").lower() == "true"
+DEBUG = os.getenv("DEBUG", "True")
 
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
@@ -93,12 +93,9 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
-if DEBUG:
-    STATICFILES_DIRS = [
-        os.path.join(BASE_DIR, 'static')
-    ]
-else:
-    STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static')
+]
 
 USER_FILES_URL = '/uploads/'
 USER_FILES_ROOT = os.path.join(BASE_DIR, 'uploads')

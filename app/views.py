@@ -34,7 +34,7 @@ class BaseView(TemplateView):
             question_count=Count('question')
         ).order_by('-question_count')[:10]
 
-        best_members = UserProfile.objects.annotate(
+        best_members = UserProfile.objects.select_related('user').annotate(
             answer_count=Count('user__answer'),
             question_count=Count('user__questions')
         ).order_by('-answer_count', '-question_count')[:5]
@@ -92,7 +92,7 @@ class TagQuestionsView(BaseView):
         tag_name = kwargs.get('tag_name')
         tag = get_object_or_404(Tag, name=tag_name)
 
-        questions = Question.objects.filter(tags=tag)
+        questions = Question.objects.select_related('author').prefetch_related('tags').filter(tags=tag)
 
         page = paginate(questions, self.request, self.paginate_by)
         context['page'] = page
@@ -109,7 +109,10 @@ class QuestionDetailView(BaseView):
         context = super().get_context_data(**kwargs)
 
         question_id = kwargs.get('question_id')
-        question = get_object_or_404(Question, id=question_id)
+        question = get_object_or_404(
+            Question.objects.select_related('author').prefetch_related('tags'),
+            id=question_id
+        )
 
         answers = Answer.objects.filter(question_id=question_id).best_answers()
 
@@ -176,7 +179,7 @@ class SettingsView(BaseView):
         context = super().get_context_data(**kwargs)
 
         try:
-            user_profile = UserProfile.objects.get(user=self.request.user)
+            user_profile = UserProfile.objects.select_related('user').get(user=self.request.user)
             context['user_profile'] = user_profile
         except UserProfile.DoesNotExist:
             context['user_profile'] = None
@@ -223,7 +226,7 @@ class LoginView(BaseView):
                 messages.error(request, "Invalid password! Try '123'.")
                 return redirect('app:login')
             else:
-                users = UserProfile.objects.all()
+                users = UserProfile.objects.select_related('user').all()
                 if users.exists():
                     random_user = random.choice(users)
                     auth.login(request, random_user.user)
