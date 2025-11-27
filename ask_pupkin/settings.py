@@ -10,7 +10,7 @@ PROJECT_NAME = "ask_pupkin"
 
 SECRET_KEY = os.getenv("SECRET_KEY", "!secret_key!")
 
-DEBUG = os.getenv("DEBUG", "True")
+DEBUG = os.getenv("DEBUG", "False")
 
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
