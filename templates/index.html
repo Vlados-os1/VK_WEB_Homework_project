@@ -11,46 +11,11 @@
 
 <div class="questions-list">
     {% for question in questions %}
-    <div class="question-item">
-        <div class="question-header">
-            <div class="question-voting">
-                <form method="POST" action="{% url 'app:vote_question' question.id %}">
-                    {% csrf_token %}
-                    <input type="hidden" name="vote_type" value="up">
-                    <button type="submit" class="vote-btn vote-up">▲</button>
-                </form>
-
-                <span class="vote-count">{{ question.likes }}</span>
-
-                <form method="POST" action="{% url 'app:vote_question' question.id %}">
-                    {% csrf_token %}
-                    <input type="hidden" name="vote_type" value="down">
-                    <button type="submit" class="vote-btn vote-down">▼</button>
-                </form>
-            </div>
-            <img src="{% static 'img/Ask_avatar.png' %}" alt="User Avatar" class="question-avatar">
-            <div class="question-info">
-                <a href="{% url 'app:question' question.id %}" class="question-title">{{ question.title }}</a>
-            </div>
-        </div>
-        <div class="question-content">
-            <p>{{ question.content }}</p>
-        </div>
-        <div class="question-meta">
-            <a href="{% url 'app:question' question.id %}" class="answers-count">answer ({{ question.answers_count }})</a>
-            <div class="question-tags">
-                <span class="tags-label">Tags:</span>
-                {% for tag in question.tags %}
-                <a href="{% url 'app:tag' tag %}" class="tag">{{ tag }}</a>
-                {% endfor %}
-            </div>
-        </div>
-    </div>
+        {% include "components/question_item.html" with question=question detailed=False %}
     {% endfor %}
 </div>
 
-{% if page %}
+{% if page and page.paginator.num_pages > 1 %}
     {% include 'pagination.html' with page=page %}
 {% endif %}
-
 {% endblock %}

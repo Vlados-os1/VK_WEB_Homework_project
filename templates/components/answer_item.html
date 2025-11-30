@@ -1,0 +1,28 @@
+{% load static %}
+<div class="answer-item">
+    <div class="answer-header">
+        <div class="answer-voting">
+            <form method="POST" action="{% url 'app:vote_answer' answer.id %}">
+                {% csrf_token %}
+                <input type="hidden" name="vote_type" value="up">
+                <button type="submit" class="vote-btn vote-up">▲</button>
+            </form>
+
+            <span class="vote-count">{{ answer.answerlike_set.count }}</span>
+
+            <form method="POST" action="{% url 'app:vote_answer' answer.id %}">
+                {% csrf_token %}
+                <input type="hidden" name="vote_type" value="down">
+                <button type="submit" class="vote-btn vote-down">▼</button>
+            </form>
+        </div>
+        <img src="{% static 'img/Ask_avatar.png' %}" alt="User Avatar" class="answer-avatar">
+        <div class="answer-info">
+            <span class="answer-author">{{ answer.author.username }}</span>
+            <span class="answer-date">{{ answer.created_at|date:"M d, Y H:i" }}</span>
+        </div>
+    </div>
+    <div class="answer-content">
+        <p>{{ answer.content }}</p>
+    </div>
+</div>

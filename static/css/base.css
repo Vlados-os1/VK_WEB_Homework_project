@@ -199,16 +199,28 @@ body {
     align-items: flex-start;
     gap: 15px;
     margin-bottom: 12px;
+    position: relative;
+}
+
+.question-voting {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    min-width: 50px;
+    flex-shrink: 0;
 }
 
 .question-avatar {
     width: 50px;
     height: 50px;
     border-radius: 4px;
+    flex-shrink: 0;
 }
 
 .question-info {
     flex: 1;
+    min-width: 0;
 }
 
 .question-title {
@@ -222,7 +234,9 @@ body {
     margin-bottom: 15px;
     line-height: 1.5;
     color: #555;
-    padding-left: 65px;
+    margin-left: 65px;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 .question-meta {
@@ -356,15 +370,7 @@ body {
     font-size: 0.9rem;
 }
 
-/* Стили для счетчика лайков */
-.question-voting {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 5px;
-    min-width: 50px;
-}
-
+/* Стили для счетчика лайков - ОБНОВЛЕННЫЕ */
 .vote-btn {
     background: none;
     border: 1px solid #ddd;
@@ -375,6 +381,10 @@ body {
     padding: 4px 8px;
     width: 30px;
     height: 25px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
 }
 
 .vote-count {
@@ -386,17 +396,42 @@ body {
     padding: 4px 0;
 }
 
+.vote-btn:hover {
+    background: #f8f9fa;
+}
+
+.vote-up:hover {
+    color: #28a745;
+    border-color: #28a745;
+}
+
+.vote-down:hover {
+    color: #dc3545;
+    border-color: #dc3545;
+}
+
 @media (max-width: 768px) {
     .footer-content {
         grid-template-columns: 1fr;
         gap: 20px;
     }
-    
+
     .footer {
         padding: 30px 0 15px;
     }
-    
+
     .question-content {
-        padding-left: 0;
+        margin-left: 0;
+    }
+
+    .question-header {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .question-voting {
+        flex-direction: row;
+        min-width: auto;
     }
 }
+
