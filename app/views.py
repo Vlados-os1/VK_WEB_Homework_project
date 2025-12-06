@@ -1,17 +1,18 @@
-import random
-
 from django.views.generic import TemplateView
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.shortcuts import redirect, get_object_or_404
-from django.http import HttpRequest, HttpResponse
-from django.contrib import messages, auth
+from django.http import HttpRequest
+from django.contrib import messages
 from django.conf import settings
-from django.db.models import Count, Q
-from django.contrib.auth.models import User
+from django.db.models import Count
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
+from django.contrib.auth import login
+from django.urls import reverse
+from django.contrib.auth import logout
 
 from app.models import Question, Answer, Tag, QuestionLike, AnswerLike, UserProfile
+from app.forms import LoginForm, AskForm, AnswerForm, SignupForm, SettingsForm
 
 def paginate(objects_list, request: HttpRequest, per_page=3):
     paginator = Paginator(objects_list, per_page)
@@ -69,13 +70,14 @@ class IndexView(BaseView):
 
 class HotQuestionsView(BaseView):
     template_name = 'index.html'
+    paginate_by = 3
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
         questions = Question.objects.best_questions()
 
-        page = paginate(questions, self.request, 3)
+        page = paginate(questions, self.request, self.paginate_by)
         context['page'] = page
         context['questions'] = page.object_list
 
@@ -109,25 +111,42 @@ class QuestionDetailView(BaseView):
         context = super().get_context_data(**kwargs)
 
         question_id = kwargs.get('question_id')
-        question = get_object_or_404(
-            Question.objects.select_related('author').prefetch_related('tags'),
-            id=question_id
-        )
+        question = get_object_or_404(Question.objects.select_related('author').prefetch_related('tags'), id=question_id)
 
-        answers = Answer.objects.filter(question_id=question_id).best_answers()
+        answers = Answer.objects.select_related('author').filter(question=question).order_by('-created_at')
 
-        page = paginate(answers, self.request, 4)
-        context['page'] = page
-        context['answers'] = page.object_list
-        context['answers_count'] = answers.count()
-        context['question'] = question
+        page = paginate(answers, self.request, per_page=3)
+
+        context.update({
+            'question': question,
+            'answers': page.object_list,
+            'page': page
+        })
 
         if self.request.user.is_authenticated:
-            context['user_liked_question'] = QuestionLike.objects.filter(
-                question=question, user=self.request.user
-            ).exists()
+            context['answer_form'] = AnswerForm()
 
         return context
+
+    def post(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect(f'{reverse("app:login")}?next={request.path}')
+
+        question_id = kwargs.get('question_id')
+        question = get_object_or_404(Question, id=question_id)
+
+        form = AnswerForm(request.POST)
+        if form.is_valid():
+            answer = form.save(commit=False)
+            answer.author = request.user
+            answer.question = question
+            answer.save()
+
+            return redirect(f'{reverse("app:question", args=[question_id])}#answer-{answer.id}')
+
+        context = self.get_context_data(**kwargs)
+        context['answer_form'] = form
+        return self.render_to_response(context)
 
 
 class AskQuestionView(BaseView):
@@ -137,25 +156,19 @@ class AskQuestionView(BaseView):
     def dispatch(self, *args, **kwargs):
         return super().dispatch(*args, **kwargs)
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        return context
+    def get(self, request, *args, **kwargs):
+        context = self.get_context_data()
+        context['form'] = AskForm()
+        return self.render_to_response(context)
 
     def post(self, request, *args, **kwargs):
-        if not request.user.is_authenticated:
-            return redirect('app:login')
+        form = AskForm(request.POST)
+        if form.is_valid():
+            question = form.save(commit=False)
+            question.author = request.user
+            question.save()
 
-        title = request.POST.get('title')
-        text = request.POST.get('text')
-        tags_input = request.POST.get('tags')
-
-        if title and text:
-            question = Question.objects.create(
-                title=title,
-                content=text,
-                author=request.user
-            )
-
+            tags_input = form.cleaned_data.get('tags', '')
             if tags_input:
                 tag_names = [tag.strip() for tag in tags_input.split(',')]
                 for tag_name in tag_names:
@@ -164,8 +177,9 @@ class AskQuestionView(BaseView):
 
             return redirect('app:question', question_id=question.id)
 
-        messages.error(request, "Please fill all required fields")
-        return self.render_to_response(self.get_context_data())
+        context = self.get_context_data()
+        context['form'] = form
+        return self.render_to_response(context)
 
 
 class SettingsView(BaseView):
@@ -175,112 +189,83 @@ class SettingsView(BaseView):
     def dispatch(self, *args, **kwargs):
         return super().dispatch(*args, **kwargs)
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-
-        try:
-            user_profile = UserProfile.objects.select_related('user').get(user=self.request.user)
-            context['user_profile'] = user_profile
-        except UserProfile.DoesNotExist:
-            context['user_profile'] = None
-
-        return context
+    def get(self, request, *args, **kwargs):
+        user_profile, created = UserProfile.objects.get_or_create(user=request.user)
+        form = SettingsForm(instance=user_profile, user=request.user)
+        context = self.get_context_data()
+        context['form'] = form
+        context['user_profile'] = user_profile
+        return self.render_to_response(context)
 
     def post(self, request, *args, **kwargs):
-        login = request.POST.get("login")
-        email = request.POST.get("email")
+        user_profile, created = UserProfile.objects.get_or_create(user=request.user)
+        form = SettingsForm(
+            request.POST,
+            request.FILES,
+            instance=user_profile,
+            user=request.user
+        )
 
-        if any([login, email]):
-            if email and User.objects.filter(email=email).exclude(id=request.user.id).exists():
-                messages.error(request, "Sorry, this email address already registered!")
-                return self.render_to_response(self.get_context_data())
+        if form.is_valid():
+            form.save()
 
-            if email:
-                request.user.email = email
-            if login:
-                request.user.username = login
+            request.user.username = form.cleaned_data['login']
+            request.user.email = form.cleaned_data['email']
             request.user.save()
 
-            user_profile, created = UserProfile.objects.get_or_create(user=request.user)
-            user_profile.save()
-
             messages.success(request, "Settings updated successfully!")
-            return redirect('app:index')
+            return redirect('app:settings')
+        else:
+            messages.error(request, "Please correct the errors below.")
 
-        return self.render_to_response(self.get_context_data())
+        context = self.get_context_data()
+        context['form'] = form
+        context['user_profile'] = user_profile
+        return self.render_to_response(context)
 
 
 class LoginView(BaseView):
     template_name = 'login.html'
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        return context
+    def get(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            return redirect(self.get_success_url())
+        context = self.get_context_data()
+        context['form'] = LoginForm()
+        return self.render_to_response(context)
 
     def post(self, request, *args, **kwargs):
-        username = request.POST.get("login")
-        password = request.POST.get("password")
+        form = LoginForm(data=request.POST)
+        if form.is_valid():
+            login(request, form.get_user())
+            next_url = request.GET.get('next', 'app:index')
+            return redirect(next_url)
 
-        if username and password:
-            if password != "123":
-                messages.error(request, "Invalid password! Try '123'.")
-                return redirect('app:login')
-            else:
-                users = UserProfile.objects.select_related('user').all()
-                if users.exists():
-                    random_user = random.choice(users)
-                    auth.login(request, random_user.user)
-                    return redirect('app:index')
-                else:
-                    messages.error(request, "No users available.")
-                    return redirect('app:login')
-
-        messages.error(request, "Please fill all fields")
-        return self.render_to_response(self.get_context_data())
-
+        context = self.get_context_data()
+        context['form'] = form
+        return self.render_to_response(context)
 
 class SignupView(BaseView):
     template_name = 'signup.html'
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        return context
+    def get(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            return redirect('app:index')
+        context = self.get_context_data()
+        context['form'] = SignupForm()
+        return self.render_to_response(context)
 
     def post(self, request, *args, **kwargs):
-        username = request.POST.get("login")
-        email = request.POST.get("email")
-        nickname = request.POST.get("nickname")
-        password = request.POST.get("password")
-        repeat_password = request.POST.get("repeat_password")
+        form = SignupForm(request.POST)
+        if form.is_valid():
+            user = form.save()
 
-        if all([username, email, password, repeat_password]):
-            if password != repeat_password:
-                messages.error(request, "Passwords don't match!")
-                return self.render_to_response(self.get_context_data())
-
-            if User.objects.filter(username=username).exists():
-                messages.error(request, "Username already exists!")
-                return self.render_to_response(self.get_context_data())
-
-            if User.objects.filter(email=email).exists():
-                messages.error(request, "Email already registered!")
-                return self.render_to_response(self.get_context_data())
-
-            user = User.objects.create_user(
-                username=username,
-                email=email,
-                password=password
-            )
-
-            UserProfile.objects.create(
-                user=user,
-            )
-
-            auth.login(request, user)
+            login(request, user)
             return redirect('app:index')
 
-        messages.error(request, "Please fill all required fields")
-        return self.render_to_response(self.get_context_data())
+        context = self.get_context_data()
+        context['form'] = form
+        return self.render_to_response(context)
 
 
 class VoteQuestionView(BaseView):
@@ -335,5 +320,6 @@ class VoteAnswerView(BaseView):
 
 class LogoutView(BaseView):
     def get(self, request, *args, **kwargs):
-        auth.logout(request)
-        return redirect('app:index')
+        next_url = request.GET.get('next', 'app:index')
+        logout(request)
+        return redirect(next_url)

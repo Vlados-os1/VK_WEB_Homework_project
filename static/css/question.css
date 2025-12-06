@@ -1,16 +1,3 @@
-/* Страница вопроса */
-.answers-section {
-    margin-top: 30px;
-}
-
-.answers-title {
-    font-size: 20px;
-    margin-bottom: 18px;
-    color: #333;
-    border-bottom: 1px solid #eee;
-    padding-bottom: 8px;
-}
-
 /* Элемент ответа */
 .answer-item {
     background: #f8f9fa;
@@ -20,13 +7,14 @@
     border-left: 3px solid #ff6b6b;
 }
 
+/* Заголовок ответа */
 .answer-header {
     display: flex;
     align-items: flex-start;
-    gap: 15px;
     margin-bottom: 10px;
 }
 
+/* Блок голосования */
 .answer-voting {
     display: flex;
     flex-direction: column;
@@ -34,44 +22,64 @@
     justify-content: center;
     gap: 2px;
     min-width: 40px;
+    margin-right: 15px;
+    flex-shrink: 0;
+}
+
+/* Кнопки голосования */
+.vote-btn {
+    background: none;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    width: 30px;
+    height: 25px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 12px;
+    color: #666;
+    transition: all 0.2s ease;
+    padding: 0;
 }
 
 .vote-btn:hover {
-    color: #333;
     background-color: #f0f0f0;
 }
 
 .vote-up:hover {
     color: #28a745;
+    border-color: #28a745;
 }
 
 .vote-down:hover {
     color: #dc3545;
+    border-color: #dc3545;
 }
 
+/* Счетчик голосов */
 .vote-count {
     font-weight: bold;
     color: #333;
     font-size: 14px;
+    margin: 2px 0;
 }
 
+/* Аватар пользователя */
 .answer-avatar {
     width: 35px;
     height: 35px;
     border-radius: 50%;
     object-fit: cover;
+    margin-right: 10px;
+    flex-shrink: 0;
 }
 
-.answer-user-info {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex: 1;
-}
-
+/* Информация об авторе */
 .answer-info {
     display: flex;
     flex-direction: column;
+    flex: 1;
 }
 
 .answer-author {
@@ -86,30 +94,26 @@
     margin-top: 2px;
 }
 
+/* Текст ответа */
 .answer-content {
     color: #555;
     line-height: 1.5;
-    margin-left: 55px; /* Выравнивание с учетом voting + отступ */
+    margin-top: 10px;
+    margin-left: 55px;
     padding-top: 5px;
 }
 
-.answer-correct {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-left: auto;
+/* Секция с ответами */
+.answers-section {
+    margin-top: 30px;
 }
 
-.correct-checkbox {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.correct-mark {
-    color: #28a745;
-    font-weight: bold;
-    font-size: 13px;
+.answers-title {
+    font-size: 20px;
+    margin-bottom: 18px;
+    color: #333;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 8px;
 }
 
 /* Форма ответа */
@@ -173,7 +177,7 @@
     transform: translateY(1px);
 }
 
-/* Стили для детального вопроса */
+/* Детальный вопрос */
 .question-item.detailed {
     background: white;
     border-radius: 8px;
@@ -185,7 +189,6 @@
 .question-item.detailed .question-header {
     display: flex;
     align-items: flex-start;
-    gap: 15px;
     margin-bottom: 15px;
 }
 
@@ -195,6 +198,31 @@
     align-items: center;
     gap: 5px;
     min-width: 40px;
+    margin-right: 15px;
+    flex-shrink: 0;
+}
+
+.question-item.detailed .vote-btn {
+    background: none;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    width: 30px;
+    height: 25px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 12px;
+    color: #666;
+    transition: all 0.2s ease;
+    padding: 0;
+}
+
+.question-item.detailed .vote-count {
+    font-weight: bold;
+    color: #333;
+    font-size: 14px;
+    margin: 2px 0;
 }
 
 .question-item.detailed .question-avatar {
@@ -202,6 +230,8 @@
     height: 40px;
     border-radius: 50%;
     object-fit: cover;
+    margin-right: 10px;
+    flex-shrink: 0;
 }
 
 .question-item.detailed .question-info {
@@ -244,46 +274,55 @@
     flex-wrap: wrap;
 }
 
-.tags-label {
-    color: #666;
-    font-size: 14px;
-    font-weight: bold;
+.tags-cloud {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
 }
 
 .tag {
-    background: #e9ecef;
-    color: #495057;
-    padding: 4px 8px;
-    border-radius: 3px;
-    font-size: 12px;
+    padding: 4px 10px;
+    background: #6c757d;
+    color: white;
     text-decoration: none;
-    transition: background-color 0.2s ease;
+    border-radius: 12px;
+    font-size: 12px;
 }
 
-.tag:hover {
-    background: #dee2e6;
-    text-decoration: none;
-    color: #495057;
+.tag-popular {
+    background: #ff6b6b;
 }
 
 /* Подсказка для входа */
 .login-prompt {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 25px 30px;
+    margin-top: 30px;
     text-align: center;
-    padding: 20px;
-    background: #f8f9fa;
-    border-radius: 6px;
-    margin-top: 20px;
-    color: #666;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.login-prompt p {
+    margin: 0;
+    color: #495057;
+    font-size: 16px;
+    line-height: 1.6;
 }
 
 .login-prompt a {
-    color: #4a6fa5;
+    color: #007bff;
     text-decoration: none;
-    font-weight: bold;
+    font-weight: 600;
+    padding: 2px 0;
+    border-bottom: 1px solid transparent;
+    transition: all 0.2s ease;
 }
 
 .login-prompt a:hover {
-    text-decoration: underline;
+    color: #0056b3;
+    border-bottom-color: #0056b3;
 }
 
 /* Адаптивность */
@@ -294,14 +333,20 @@
         gap: 10px;
     }
 
-    .answer-content {
-        margin-left: 0;
-        margin-top: 10px;
+    .answer-voting {
+        flex-direction: row;
+        min-width: auto;
+        margin-right: 0;
+        margin-bottom: 10px;
     }
 
-    .question-item.detailed .question-content,
-    .question-item.detailed .question-meta {
+    .answer-avatar {
+        margin-bottom: 10px;
+    }
+
+    .answer-content {
         margin-left: 0;
+        margin-top: 15px;
     }
 
     .question-item.detailed .question-header {
@@ -312,5 +357,12 @@
     .question-item.detailed .question-voting {
         flex-direction: row;
         min-width: auto;
+        margin-right: 0;
+        margin-bottom: 10px;
+    }
+
+    .question-item.detailed .question-content,
+    .question-item.detailed .question-meta {
+        margin-left: 0;
     }
 }
