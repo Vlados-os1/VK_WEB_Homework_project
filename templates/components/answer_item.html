@@ -1,5 +1,5 @@
 {% load static %}
-<div class="answer-item">
+<div class="answer-item" id="answer-{{ answer.id }}">
     <div class="answer-header">
         <div class="answer-voting">
             <form method="POST" action="{% url 'app:vote_answer' answer.id %}">

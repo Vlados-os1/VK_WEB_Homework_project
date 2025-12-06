@@ -23,7 +23,7 @@
     <h3 class="form-title">Enter your answer here...</h3>
     <form class="answer-form" method="POST" action="{% url 'app:question' question.id %}">
         {% csrf_token %}
-        <textarea class="answer-textarea" name="content" placeholder="Your answer..." required></textarea>
+        {{ answer_form.content }}
         <button type="submit" class="submit-button">Answer</button>
     </form>
 </div>

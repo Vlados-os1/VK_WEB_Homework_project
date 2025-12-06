@@ -22,28 +22,37 @@
     <form class="auth-form" method="POST" action="{% url 'app:signup' %}">
         {% csrf_token %}
 
+        <!-- Общие ошибки формы (не привязанные к полям) -->
+        {% if form.non_field_errors %}
+        <div class="form-errors">
+            {% for error in form.non_field_errors %}
+                <div class="error-message">{{ error }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
         <div class="form-group">
-            <label for="login" class="form-label">Login</label>
-            <input type="text"
-                   id="login"
-                   name="login"
-                   class="form-input"
-                   placeholder="Enter your login"
-                   maxlength="30"
-                   value="{{ request.POST.login }}"
-                   required>
+            <label for="id_username" class="form-label">Login</label>
+            {{ form.username }}
+            {% if form.username.errors %}
+            <div class="field-error">
+                {% for error in form.username.errors %}
+                    <span>{{ error }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
         </div>
 
         <div class="form-group">
-            <label for="email" class="form-label">Email</label>
-            <input type="email"
-                   id="email"
-                   name="email"
-                   class="form-input"
-                   placeholder="Enter your email"
-                   maxlength="50"
-                   value="{{ request.POST.email }}"
-                   required>
+            <label for="id_email" class="form-label">Email</label>
+            {{ form.email }}
+            {% if form.email.errors %}
+            <div class="field-error">
+                {% for error in form.email.errors %}
+                    <span>{{ error }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
         </div>
 
         <div class="form-group">
@@ -51,38 +60,45 @@
             <input type="text"
                    id="nickname"
                    name="nickname"
-                   class="form-input"
+                   class="form-input {% if form.nickname.errors %}error-input{% endif %}"
                    placeholder="Enter your nickname"
                    maxlength="30"
-                   value="{{ request.POST.nickname }}"
+                   value="{% if form.nickname.value %}{{ form.nickname.value }}{% elif request.POST.nickname %}{{ request.POST.nickname }}{% endif %}"
                    required>
+            {% if form.nickname.errors %}
+            <div class="field-error">
+                {% for error in form.nickname.errors %}
+                    <span>{{ error }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
         </div>
 
         <div class="form-group">
-            <label for="password" class="form-label">Password</label>
-            <input type="password"
-                   id="password"
-                   name="password"
-                   class="form-input"
-                   placeholder="Enter your password"
-                   maxlength="30"
-                   value="{{ request.POST.password }}"
-                   required>
+            <label for="id_password1" class="form-label">Password</label>
+            {{ form.password1 }}
+            {% if form.password1.errors %}
+            <div class="field-error">
+                {% for error in form.password1.errors %}
+                    <span>{{ error }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
         </div>
 
         <div class="form-group">
-            <label for="repeat-password" class="form-label">Repeat password</label>
-            <input type="password"
-                   id="repeat-password"
-                   name="repeat_password"
-                   class="form-input"
-                   placeholder="Repeat your password"
-                   maxlength="30"
-                   value="{{ request.POST.repeat_password }}"
-                   required>
+            <label for="id_password2" class="form-label">Repeat password</label>
+            {{ form.password2 }}
+            {% if form.password2.errors %}
+            <div class="field-error">
+                {% for error in form.password2.errors %}
+                    <span>{{ error }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
         </div>
 
-             <button type="submit" class="auth-button">Register!</button>
+        <button type="submit" class="auth-button">Register!</button>
     </form>
 
     <div class="auth-link">

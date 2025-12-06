@@ -32,7 +32,7 @@
                             <span class="user-name">{{ user.username }}</span>
                             <div class="user-menu">
                                 <a href="{% url 'app:settings' %}" class="user-menu-item">settings</a>
-                                <a href="{% url 'app:logout' %}" class="user-menu-item">log out</a>
+                                <a href="{% url 'app:logout' %}?next={{ request.path }}" class="user-menu-item">log out</a>
                             </div>
                         {% else %}
                             <div class="user-menu">

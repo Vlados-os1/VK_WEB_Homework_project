@@ -6,6 +6,7 @@ from app.managers import DefaultManager, QuestionManager, AnswerManager
 
 class UserProfile(models.Model):
     user = models.ForeignKey(User, verbose_name="Пользователь", on_delete=models.CASCADE)
+    nickname = models.CharField(verbose_name="Никнейм", max_length=30, blank=True, null=True)
     avatar = models.ImageField(verbose_name="Аватарка пользователя", upload_to='uploads/', null=True, blank=True)
     created_at = models.DateTimeField(verbose_name="Время создания профиля", auto_now_add=True)
     updated_at = models.DateTimeField(verbose_name="Время редактирования профиля", auto_now=True)
