@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from .models import UserProfile, Question, Answer, Tag
 from django.core.exceptions import ValidationError
+from django.db import transaction
 
 
 class LoginForm(AuthenticationForm):
@@ -104,24 +105,24 @@ class SignupForm(UserCreationForm):
         return cleaned_data
 
     def save(self, commit=True):
-        user = super().save(commit=False)
-        user.email = self.cleaned_data['email']
+        with transaction.atomic():
+            user = super().save(commit=False)
+            user.email = self.cleaned_data['email']
 
-        if commit:
-            user.save()
-            # Создаем профиль
-            UserProfile.objects.create(
-                user=user,
-                nickname=self.cleaned_data['nickname']
-            )
+            if commit:
+                user.save()
+                UserProfile.objects.update_or_create(
+                    user=user,
+                    defaults={'nickname': self.cleaned_data['nickname']}
+                )
 
-        return user
+            return user
 
 
 class SettingsForm(forms.ModelForm):
-    login = forms.CharField(max_length=30, label="Login")
-    email = forms.EmailField(max_length=50, label="Email")
-    nickname = forms.CharField(max_length=30, label="NickName")
+    login = forms.CharField(max_length=30, label="Login", required=True, min_length=3)
+    email = forms.EmailField(max_length=50, label="Email", required=True)
+    nickname = forms.CharField(max_length=30, label="NickName", required=True, min_length=2,)
     avatar = forms.ImageField(required=False, label="Upload avatar")
 
     class Meta:
@@ -138,12 +139,6 @@ class SettingsForm(forms.ModelForm):
     def clean_login(self):
         login = self.cleaned_data.get('login')
 
-        if not login:
-            raise ValidationError("Username is required.")
-
-        if len(login) < 3:
-            raise ValidationError("Username must be at least 3 characters long.")
-
         if User.objects.filter(username=login).exclude(id=self.user.id).exists():
             raise ValidationError("Sorry, this username is already taken!")
 
@@ -151,9 +146,33 @@ class SettingsForm(forms.ModelForm):
 
     def clean_email(self):
         email = self.cleaned_data.get('email')
+
         if User.objects.filter(email=email).exclude(id=self.user.id).exists():
-            raise ValidationError("Sorry, this email address already registered!")
+            raise ValidationError("Sorry, this email address is already registered!")
+
         return email
+
+    def clean_nickname(self):
+        nickname = self.cleaned_data.get('nickname')
+
+        if UserProfile.objects.filter(nickname=nickname).exclude(user=self.user).exists():
+            raise ValidationError("Sorry, this nickname is already taken!")
+
+        return nickname
+
+    def clean_avatar(self):
+        avatar = self.cleaned_data.get('avatar')
+
+        if avatar:
+            max_size = 2 * 1024 * 1024
+            if avatar.size > max_size:
+                raise ValidationError(f"File size too large. Maximum allowed: 2MB.")
+
+            allowed_types = ['image/jpeg', 'image/png']
+            if avatar.content_type not in allowed_types:
+                raise ValidationError("Unsupported file type. Allowed: JPG, PNG.")
+
+        return avatar
 
 
 class AskForm(forms.ModelForm):
@@ -183,6 +202,29 @@ class AskForm(forms.ModelForm):
             }),
         }
 
+    def save(self, author, commit=True):
+        with transaction.atomic():
+            question = super().save(commit=False)
+            question.author = author
+
+            if commit:
+                question.save()
+
+                tags_input = self.cleaned_data.get('tags', '')
+                if tags_input:
+                    tag_names = [tag.strip() for tag in tags_input.split(',')]
+                    tag_names = [name for name in tag_names if name]
+                    tag_names = list(set(tag_names))
+
+                    if tag_names:
+                        tags = []
+                        for tag_name in tag_names:
+                            tag, created = Tag.objects.get_or_create(name=tag_name)
+                            tags.append(tag)
+
+                        question.tags.set(tags)
+
+            return question
 
 class AnswerForm(forms.ModelForm):
     class Meta:
@@ -195,3 +237,14 @@ class AnswerForm(forms.ModelForm):
                 'rows': 4
             }),
         }
+
+    def save(self, author, question, commit=True):
+        with transaction.atomic():
+            answer = super().save(commit=False)
+            answer.author = author
+            answer.question = question
+
+            if commit:
+                answer.save()
+
+            return answer

@@ -18,7 +18,11 @@
             </form>
             {% endif %}
         </div>
-        <img src="{% static 'img/Ask_avatar.png' %}" alt="User Avatar" class="question-avatar">
+        {% if question.author.userprofile.avatar %}
+            <img src="{{ MEDIA_URL }}{{ question.author.userprofile.avatar.url }}" alt="User Avatar" class="question-avatar">
+        {% else %}
+            <img src="{% static 'img/Ask_avatar.png' %}" alt="User Avatar" class="question-avatar">
+        {% endif %}
         <div class="question-info">
             {% if detailed %}
                 <h1 class="question-title">{{ question.title }}</h1>

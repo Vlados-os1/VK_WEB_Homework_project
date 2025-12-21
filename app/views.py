@@ -10,6 +10,7 @@ from django.utils.decorators import method_decorator
 from django.contrib.auth import login
 from django.urls import reverse
 from django.contrib.auth import logout
+from django.contrib.auth.mixins import LoginRequiredMixin
 
 from app.models import Question, Answer, Tag, QuestionLike, AnswerLike, UserProfile
 from app.forms import LoginForm, AskForm, AnswerForm, SignupForm, SettingsForm
@@ -49,6 +50,16 @@ class BaseView(TemplateView):
             },
             'USER_FILES_URL': settings.USER_FILES_URL,
         })
+
+        context['MEDIA_URL'] = settings.MEDIA_URL
+
+        if self.request.user.is_authenticated:
+            try:
+                user_profile = UserProfile.objects.get(user=self.request.user)
+                context['user_profile'] = user_profile
+            except UserProfile.DoesNotExist:
+                context['user_profile'] = None
+
         return context
 
 
@@ -137,24 +148,21 @@ class QuestionDetailView(BaseView):
 
         form = AnswerForm(request.POST)
         if form.is_valid():
-            answer = form.save(commit=False)
-            answer.author = request.user
-            answer.question = question
-            answer.save()
-
-            return redirect(f'{reverse("app:question", args=[question_id])}#answer-{answer.id}')
+            try:
+                answer = form.save(author=request.user, question=question)
+                return redirect(f'{reverse("app:question", args=[question_id])}#answer-{answer.id}')
+            except Exception as e:
+                messages.error(request, f"An error occurred while saving your answer: {str(e)}")
 
         context = self.get_context_data(**kwargs)
         context['answer_form'] = form
         return self.render_to_response(context)
 
 
-class AskQuestionView(BaseView):
+class AskQuestionView(LoginRequiredMixin, BaseView):
     template_name = 'ask.html'
-
-    @method_decorator(login_required)
-    def dispatch(self, *args, **kwargs):
-        return super().dispatch(*args, **kwargs)
+    login_url = '/login/'
+    redirect_field_name = 'next'
 
     def get(self, request, *args, **kwargs):
         context = self.get_context_data()
@@ -164,30 +172,21 @@ class AskQuestionView(BaseView):
     def post(self, request, *args, **kwargs):
         form = AskForm(request.POST)
         if form.is_valid():
-            question = form.save(commit=False)
-            question.author = request.user
-            question.save()
-
-            tags_input = form.cleaned_data.get('tags', '')
-            if tags_input:
-                tag_names = [tag.strip() for tag in tags_input.split(',')]
-                for tag_name in tag_names:
-                    tag, created = Tag.objects.get_or_create(name=tag_name)
-                    question.tags.add(tag)
-
-            return redirect('app:question', question_id=question.id)
+            try:
+                question = form.save(author=request.user)
+                return redirect('app:question', question_id=question.id)
+            except Exception as e:
+                messages.error(request, f"An error occurred while saving your question: {str(e)}")
 
         context = self.get_context_data()
         context['form'] = form
         return self.render_to_response(context)
 
 
-class SettingsView(BaseView):
+class SettingsView(LoginRequiredMixin, BaseView):
     template_name = 'settings.html'
-
-    @method_decorator(login_required)
-    def dispatch(self, *args, **kwargs):
-        return super().dispatch(*args, **kwargs)
+    login_url = '/login/'
+    redirect_field_name = 'next'
 
     def get(self, request, *args, **kwargs):
         user_profile, created = UserProfile.objects.get_or_create(user=request.user)
@@ -229,7 +228,8 @@ class LoginView(BaseView):
 
     def get(self, request, *args, **kwargs):
         if request.user.is_authenticated:
-            return redirect(self.get_success_url())
+            next_url = request.GET.get('next', 'app:index')
+            return redirect(next_url)
         context = self.get_context_data()
         context['form'] = LoginForm()
         return self.render_to_response(context)
@@ -268,9 +268,10 @@ class SignupView(BaseView):
         return self.render_to_response(context)
 
 
-class VoteQuestionView(BaseView):
+class VoteQuestionView(LoginRequiredMixin, TemplateView):
+    login_url = '/login/'
+    redirect_field_name = 'next'
 
-    @method_decorator(login_required)
     def post(self, request, *args, **kwargs):
         question_id = kwargs.get('question_id')
         vote_type = request.POST.get('vote_type')
@@ -294,9 +295,10 @@ class VoteQuestionView(BaseView):
         return redirect('app:question', question_id=question_id)
 
 
-class VoteAnswerView(BaseView):
+class VoteAnswerView(LoginRequiredMixin, TemplateView):
+    login_url = '/login/'
+    redirect_field_name = 'next'
 
-    @method_decorator(login_required)
     def post(self, request, *args, **kwargs):
         answer_id = kwargs.get('answer_id')
         vote_type = request.POST.get('vote_type')

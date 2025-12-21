@@ -20,14 +20,20 @@
                 <div class="search">
                     <form class="search-form">
                         <input type="text" class="search-input" placeholder="Search">
-                        <button type="submit" class="search-button">ASK!</button>
+                        <button type="submit" class="search-button">Search</button>
                     </form>
+
+                    <a href="{% url 'app:ask' %}" class="ask-button-base">Ask Question</a>
                 </div>
 
                 <div class="user-block">
                     <div class="user-info">
                         {% if user.is_authenticated %}
-                            <img src="{% static 'img/My_avatar.png' %}" alt="User Avatar" class="question-avatar">
+                            {% if user_profile and user_profile.avatar %}
+                                <img src="{{ MEDIA_URL }}{{ user_profile.avatar.url }}" alt="User Avatar" class="question-avatar">
+                            {% else %}
+                                <img src="{% static 'img/My_avatar.png' %}" alt="User Avatar" class="question-avatar">
+                            {% endif %}
                         
                             <span class="user-name">{{ user.username }}</span>
                             <div class="user-menu">
