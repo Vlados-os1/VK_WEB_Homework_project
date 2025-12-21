@@ -1,5 +1,5 @@
 {% load static %}
-<div class="answer-item">
+<div class="answer-item" id="answer-{{ answer.id }}">
     <div class="answer-header">
         <div class="answer-voting">
             <form method="POST" action="{% url 'app:vote_answer' answer.id %}">
@@ -16,7 +16,11 @@
                 <button type="submit" class="vote-btn vote-down">▼</button>
             </form>
         </div>
-        <img src="{% static 'img/Ask_avatar.png' %}" alt="User Avatar" class="answer-avatar">
+        {% if answer.author.userprofile.avatar %}
+            <img src="{{ MEDIA_URL }}{{ answer.author.userprofile.avatar.url }}" alt="User Avatar" class="answer-avatar">
+        {% else %}
+            <img src="{% static 'img/Ask_avatar.png' %}" alt="User Avatar" class="answer-avatar">
+        {% endif %}
         <div class="answer-info">
             <span class="answer-author">{{ answer.author.username }}</span>
             <span class="answer-date">{{ answer.created_at|date:"M d, Y H:i" }}</span>
