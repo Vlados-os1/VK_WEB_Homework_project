@@ -2,21 +2,21 @@
 <div class="question-item {% if detailed %}detailed{% endif %}">
     <div class="question-header">
         <div class="question-voting">
-            <form method="POST" action="{% url 'app:vote_question' question.id %}">
-                {% csrf_token %}
-                <input type="hidden" name="vote_type" value="{% if detailed %}up_a{% else %}up{% endif %}">
-                <button type="submit" class="vote-btn vote-up">▲</button>
-            </form>
-
-            <span class="vote-count">{{ question.questionlike_set.count }}</span>
-
-            <form method="POST" action="{% url 'app:vote_question' question.id %}">
-                {% csrf_token %}
-                <input type="hidden" name="vote_type" value="{% if detailed %}down_a{% else %}down{% endif %}">
-                <button type="submit" class="vote-btn vote-down">▼</button>
-            </form>
+            <button type="button" class="vote-btn vote-up {% if question.is_liked_by_user %}active{% endif %}" data-question-id="{{ question.id }}" data-vote-type="up" {% if not user.is_authenticated %}disabled title="Please login to vote"{% endif %}>
+                ▲
+            </button>
+            <span class="vote-count" data-question-id="{{ question.id }}">
+                {{ question.questionlike_set.count }}
+            </span>
+            <button type="button" class="vote-btn vote-down" data-question-id="{{ question.id }}" data-vote-type="down" {% if not user.is_authenticated %}disabled title="Please login to vote"{% endif %}>
+                ▼
+            </button>
         </div>
-        <img src="{% static 'img/Ask_avatar.png' %}" alt="User Avatar" class="question-avatar">
+        {% if question.author.userprofile.avatar %}
+            <img src="{{ question.author.userprofile.avatar.url }}" alt="User Avatar" class="question-avatar">
+        {% else %}
+            <img src="{% static 'img/Ask_avatar.png' %}" alt="User Avatar" class="question-avatar">
+        {% endif %}
         <div class="question-info">
             {% if detailed %}
                 <h1 class="question-title">{{ question.title }}</h1>
@@ -31,12 +31,12 @@
     </div>
     <div class="question-meta">
         {% if not detailed %}
-            <a href="{% url 'app:question' question.id %}" class="answers-count">answer ({{ question.answers.count }})</a>
+            <a href="{% url 'app:question' question.id %}" class="answers-count">{{ question.answers.count }} answer</a>
         {% endif %}
         <div class="question-tags">
             <span class="tags-label">Tags:</span>
             {% for tag in question.tags.all %}
-            <a href="{% url 'app:tag' tag.name %}" class="tag">{{ tag.name }}</a>
+                <a href="{% url 'app:tag' tag.name %}" class="tag">{{ tag.name }}</a>
             {% endfor %}
         </div>
     </div>

@@ -11,41 +11,40 @@
 <div class="ask-form-section">
     <h1 class="ask-title">New Question</h1>
 
+    {% if form.errors %}
+    <div class="error-message">
+        Please correct the errors below.
+    </div>
+    {% endif %}
+
     <form class="ask-form" method="POST">
         {% csrf_token %}
+
         <div class="form-group">
-            <label for="title" class="form-label">Title</label>
-            <input type="text"
-                   id="title"
-                   name="title"
-                   class="form-input"
-                   placeholder="How to build a moon park ?"
-                   value="{{ request.POST.title }}"
-                   maxlength="100"
-                   required>
+            <label for="id_title" class="form-label">Title</label>
+            {{ form.title }}
+            {% if form.title.errors %}
+            <div class="field-error">{{ form.title.errors }}</div>
+            {% endif %}
             <div class="form-hint">Maximum 100 characters</div>
         </div>
 
         <div class="form-group">
-            <label for="text" class="form-label">Text</label>
-            <textarea id="text"
-                      name="text"
-                      class="form-textarea"
-                      placeholder="Really, how ?&#10;Have no idea about it"
-                      maxlength="1000"
-                      required>{{ request.POST.text }}</textarea>
+            <label for="id_content" class="form-label">Text</label>
+            {{ form.content }}
+            {% if form.content.errors %}
+            <div class="field-error">{{ form.content.errors }}</div>
+            {% endif %}
             <div class="form-hint">Maximum 1000 characters</div>
         </div>
 
         <div class="form-group">
-            <label for="tags" class="form-label">Tags</label>
-            <input type="text"
-                   id="tags"
-                   name="tags"
-                   class="form-input"
-                   placeholder="moon, park, puzzle"
-                   value="{{ request.POST.tags }}"
-                   maxlength="50">
+            <label for="id_tags" class="form-label">Tags</label>
+            {{ form.tags }}
+            {% if form.tags.errors %}
+            <div class="field-error">{{ form.tags.errors }}</div>
+            {% endif %}
+            <div class="form-hint">Separate tags with commas</div>
         </div>
 
         <button type="submit" class="ask-button">ASK!</button>
