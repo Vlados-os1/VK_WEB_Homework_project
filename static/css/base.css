@@ -416,7 +416,6 @@ body {
     font-size: 0.9rem;
 }
 
-/* Стили для счетчика лайков - ОБНОВЛЕННЫЕ */
 .vote-btn {
     background: none;
     border: 1px solid #ddd;
@@ -456,6 +455,25 @@ body {
     border-color: #dc3545;
 }
 
+.question-voting {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    min-width: 50px;
+    flex-shrink: 0;
+}
+
+.answer-voting {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    min-width: 40px;
+    margin-right: 15px;
+    flex-shrink: 0;
+}
+
 @media (max-width: 768px) {
     .footer-content {
         grid-template-columns: 1fr;
@@ -475,8 +493,9 @@ body {
         gap: 10px;
     }
 
-    .question-voting {
-        flex-direction: row;
-        min-width: auto;
+    .question-voting,
+    .answer-voting {
+        flex-direction: column !important;
+        min-width: 50px;
     }
 }

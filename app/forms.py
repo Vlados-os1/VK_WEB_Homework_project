@@ -37,6 +37,13 @@ class SignupForm(UserCreationForm):
             'placeholder': 'Enter your nickname'
         })
     )
+    avatar = forms.ImageField(
+        required=False,
+        widget=forms.FileInput(attrs={
+            'class': 'avatar-input',
+            'accept': 'image/*'
+        })
+    )
 
     class Meta:
         model = User
@@ -94,6 +101,19 @@ class SignupForm(UserCreationForm):
             raise ValidationError("Nickname must be at least 2 characters long.")
         return nickname
 
+    def clean_avatar(self):
+        avatar = self.cleaned_data.get('avatar')
+        if avatar:
+            max_size = 2 * 1024 * 1024  # 2MB
+            if avatar.size > max_size:
+                raise ValidationError(f"File size too large. Maximum allowed: 2MB.")
+
+            allowed_types = ['image/jpeg', 'image/png', 'image/gif']
+            if avatar.content_type not in allowed_types:
+                raise ValidationError("Unsupported file type. Allowed: JPG, PNG, GIF.")
+
+        return avatar
+
     def clean(self):
         cleaned_data = super().clean()
         password1 = cleaned_data.get('password1')
@@ -111,10 +131,18 @@ class SignupForm(UserCreationForm):
 
             if commit:
                 user.save()
-                UserProfile.objects.update_or_create(
+
+                user_profile = UserProfile.objects.update_or_create(
                     user=user,
-                    defaults={'nickname': self.cleaned_data['nickname']}
-                )
+                    defaults={
+                        'nickname': self.cleaned_data['nickname']
+                    }
+                )[0]
+
+                avatar = self.cleaned_data.get('avatar')
+                if avatar:
+                    user_profile.avatar = avatar
+                    user_profile.save()
 
             return user
 
@@ -122,8 +150,12 @@ class SignupForm(UserCreationForm):
 class SettingsForm(forms.ModelForm):
     login = forms.CharField(max_length=30, label="Login", required=True, min_length=3)
     email = forms.EmailField(max_length=50, label="Email", required=True)
-    nickname = forms.CharField(max_length=30, label="NickName", required=True, min_length=2,)
-    avatar = forms.ImageField(required=False, label="Upload avatar")
+    nickname = forms.CharField(max_length=30, label="NickName", required=True, min_length=2)
+    avatar = forms.ImageField(
+        required=False,
+        label="Upload avatar",
+        widget=forms.FileInput(attrs={'class': 'avatar-input'})
+    )
 
     class Meta:
         model = UserProfile
@@ -135,6 +167,7 @@ class SettingsForm(forms.ModelForm):
         if self.user:
             self.fields['login'].initial = self.user.username
             self.fields['email'].initial = self.user.email
+            self.fields['nickname'].initial = self.instance.nickname if self.instance else ''
 
     def clean_login(self):
         login = self.cleaned_data.get('login')
@@ -163,16 +196,34 @@ class SettingsForm(forms.ModelForm):
     def clean_avatar(self):
         avatar = self.cleaned_data.get('avatar')
 
-        if avatar:
-            max_size = 2 * 1024 * 1024
-            if avatar.size > max_size:
-                raise ValidationError(f"File size too large. Maximum allowed: 2MB.")
+        if not avatar or isinstance(avatar, str):
+            return avatar
 
-            allowed_types = ['image/jpeg', 'image/png']
-            if avatar.content_type not in allowed_types:
-                raise ValidationError("Unsupported file type. Allowed: JPG, PNG.")
+        try:
+            if hasattr(avatar, 'content_type'):
+                max_size = 2 * 1024 * 1024
+                if avatar.size > max_size:
+                    raise ValidationError(f"File size too large. Maximum allowed: 2MB.")
+
+                allowed_types = ['image/jpeg', 'image/png']
+                if avatar.content_type not in allowed_types:
+                    raise ValidationError("Unsupported file type. Allowed: JPG, PNG.")
+        except AttributeError:
+            pass
 
         return avatar
+
+    def save(self, commit=True):
+        user_profile = super().save(commit=False)
+
+        if commit:
+            user_profile.save()
+
+            self.user.username = self.cleaned_data['login']
+            self.user.email = self.cleaned_data['email']
+            self.user.save()
+
+        return user_profile
 
 
 class AskForm(forms.ModelForm):

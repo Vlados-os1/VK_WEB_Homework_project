@@ -1,23 +1,19 @@
 {% load static %}
-<div class="answer-item" id="answer-{{ answer.id }}">
+<div class="answer-item {% if answer.is_correct %}correct-answer{% endif %}" id="answer-{{ answer.id }}">
     <div class="answer-header">
         <div class="answer-voting">
-            <form method="POST" action="{% url 'app:vote_answer' answer.id %}">
-                {% csrf_token %}
-                <input type="hidden" name="vote_type" value="up">
-                <button type="submit" class="vote-btn vote-up">▲</button>
-            </form>
-
-            <span class="vote-count">{{ answer.answerlike_set.count }}</span>
-
-            <form method="POST" action="{% url 'app:vote_answer' answer.id %}">
-                {% csrf_token %}
-                <input type="hidden" name="vote_type" value="down">
-                <button type="submit" class="vote-btn vote-down">▼</button>
-            </form>
+            <button type="button" class="vote-btn vote-up {% if answer.is_liked_by_user %}active{% endif %}" data-answer-id="{{ answer.id }}" data-vote-type="up" {% if not user.is_authenticated %}disabled title="Please login to vote"{% endif %}>
+                ▲
+            </button>
+            <span class="vote-count" data-answer-id="{{ answer.id }}">
+                {{ answer.answerlike_set.count }}
+            </span>
+            <button type="button" class="vote-btn vote-down" data-answer-id="{{ answer.id }}" data-vote-type="down" {% if not user.is_authenticated %}disabled title="Please login to vote"{% endif %}>
+                ▼
+            </button>
         </div>
         {% if answer.author.userprofile.avatar %}
-            <img src="{{ MEDIA_URL }}{{ answer.author.userprofile.avatar.url }}" alt="User Avatar" class="answer-avatar">
+            <img src="{{ answer.author.userprofile.avatar.url }}" alt="User Avatar" class="answer-avatar">
         {% else %}
             <img src="{% static 'img/Ask_avatar.png' %}" alt="User Avatar" class="answer-avatar">
         {% endif %}
@@ -25,8 +21,21 @@
             <span class="answer-author">{{ answer.author.username }}</span>
             <span class="answer-date">{{ answer.created_at|date:"M d, Y H:i" }}</span>
         </div>
+        {% if detailed and user.is_authenticated and is_question_author %}
+            <div class="correct-answer-controls">
+                {% if answer.is_correct %}
+                    <button type="button" class="mark-correct-btn marked" disabled>Correct Answer</button>
+                    <button type="button" class="unmark-correct-btn" data-unmark-question="{{ question.id }}">Unmark</button>
+                {% else %}
+                    <button type="button" class="mark-correct-btn" data-mark-question="{{ question.id }}" data-mark-answer="{{ answer.id }}">Mark as Correct</button>
+                {% endif %}
+            </div>
+        {% endif %}
     </div>
     <div class="answer-content">
         <p>{{ answer.content }}</p>
+        {% if answer.is_correct %}
+            <div class="correct-badge">Correct Answer</div>
+        {% endif %}
     </div>
 </div>

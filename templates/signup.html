@@ -19,10 +19,9 @@
         </div>
     {% endif %}
 
-    <form class="auth-form" method="POST" action="{% url 'app:signup' %}">
+    <form class="auth-form" method="POST" action="{% url 'app:signup' %}" enctype="multipart/form-data">
         {% csrf_token %}
 
-        <!-- Общие ошибки формы (не привязанные к полям) -->
         {% if form.non_field_errors %}
         <div class="form-errors">
             {% for error in form.non_field_errors %}
@@ -61,6 +60,18 @@
             {% if form.nickname.errors %}
             <div class="field-error">
                 {% for error in form.nickname.errors %}
+                    <span>{{ error }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="id_avatar" class="form-label">Avatar (optional)</label>
+            {{ form.avatar }}
+            {% if form.avatar.errors %}
+            <div class="field-error">
+                {% for error in form.avatar.errors %}
                     <span>{{ error }}</span>
                 {% endfor %}
             </div>

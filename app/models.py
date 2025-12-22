@@ -5,9 +5,9 @@ from app.managers import DefaultManager, QuestionManager, AnswerManager
 
 
 class UserProfile(models.Model):
-    user = models.ForeignKey(User, verbose_name="Пользователь", on_delete=models.CASCADE)
+    user = models.OneToOneField(User, verbose_name="Пользователь", on_delete=models.CASCADE, related_name="userprofile")
     nickname = models.CharField(verbose_name="Никнейм", max_length=30, blank=True, null=True)
-    avatar = models.ImageField(verbose_name="Аватарка пользователя", upload_to='uploads/', null=True, blank=True)
+    avatar = models.ImageField(verbose_name="Аватарка пользователя", upload_to='avatars/', null=True, blank=True)
     created_at = models.DateTimeField(verbose_name="Время создания профиля", auto_now_add=True)
     updated_at = models.DateTimeField(verbose_name="Время редактирования профиля", auto_now=True)
 
@@ -96,3 +96,28 @@ class AnswerLike(models.Model):
 
     def __str__(self):
         return f"Лайк пользователя #{self.user_id} к ответу #{self.answer_id}"
+
+class CorrectAnswer(models.Model):
+
+    question = models.OneToOneField(
+        "app.Question",
+        verbose_name="Вопрос",
+        on_delete=models.CASCADE,
+        related_name="correct_answer"
+    )
+
+    answer = models.ForeignKey(
+        "app.Answer",
+        verbose_name="Правильный ответ",
+        on_delete=models.CASCADE,
+        related_name="marked_correct"
+    )
+
+    marked_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Правильный ответ"
+        verbose_name_plural = "Правильные ответы"
+
+    def __str__(self):
+        return f"Правильный ответ #{self.answer_id} для вопроса #{self.question_id}"

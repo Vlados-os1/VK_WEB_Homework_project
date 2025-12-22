@@ -14,7 +14,7 @@
     <h2 class="answers-title">Answers ({{ answers|length }})</h2>
 
     {% for answer in answers %}
-        {% include "components/answer_item.html" with answer=answer %}
+        {% include "components/answer_item.html" with answer=answer question=question detailed=True is_question_author=is_question_author %}
     {% endfor %}
 </div>
 

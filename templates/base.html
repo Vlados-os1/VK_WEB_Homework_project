@@ -29,10 +29,10 @@
                 <div class="user-block">
                     <div class="user-info">
                         {% if user.is_authenticated %}
-                            {% if user_profile and user_profile.avatar %}
-                                <img src="{{ MEDIA_URL }}{{ user_profile.avatar.url }}" alt="User Avatar" class="question-avatar">
+                            {% if userprofile and userprofile.avatar %}
+                                <img src="{{ userprofile.avatar.url }}" alt="User Avatar" class="question-avatar" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
                             {% else %}
-                                <img src="{% static 'img/My_avatar.png' %}" alt="User Avatar" class="question-avatar">
+                                <img src="{% static 'img/My_avatar.png' %}" alt="User Avatar" class="question-avatar" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
                             {% endif %}
                         
                             <span class="user-name">{{ user.username }}</span>
@@ -125,5 +125,172 @@
             </div>
         </div>
     </footer>
+
+    <script>
+        (function() {
+            window.getCookie = function(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            };
+
+            window.ajaxRequest = function(url, method, data, successCallback, errorCallback) {
+                const xhr = new XMLHttpRequest();
+                xhr.open(method, url);
+                xhr.setRequestHeader('Content-Type', 'application/json');
+                xhr.setRequestHeader('X-CSRFToken', getCookie('csrftoken'));
+                xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+
+                xhr.onload = function() {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        try {
+                            const response = JSON.parse(xhr.responseText);
+                            successCallback(response);
+                        } catch (e) {
+                            errorCallback(xhr, 'Invalid JSON response');
+                        }
+                    } else {
+                        errorCallback(xhr);
+                    }
+                };
+
+                xhr.onerror = function() {
+                    errorCallback(xhr, 'Network error');
+                };
+
+                xhr.send(JSON.stringify(data));
+            };
+
+            window.delegateEvent = function(eventName, selector, handler) {
+                document.addEventListener(eventName, function(e) {
+                    if (e.target.matches(selector)) {
+                        handler(e);
+                    }
+                });
+            };
+
+            window.documentReady = function(callback) {
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', callback);
+                } else {
+                    callback();
+                }
+            };
+
+            window.addClickListener = function(selector, handler) {
+                document.addEventListener('click', function(e) {
+                    if (e.target.matches(selector)) {
+                        handler(e);
+                    }
+                });
+            };
+        })();
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.addEventListener('click', function(e) {
+                const target = e.target.closest('[data-question-id], [data-answer-id], [data-mark-answer], [data-unmark-question]');
+                if (!target) return;
+
+                e.preventDefault();
+
+                if (target.dataset.questionId && target.dataset.voteType) {
+                    handleVote('question', target.dataset.questionId, target.dataset.voteType, target);
+                }
+
+                if (target.dataset.answerId && target.dataset.voteType) {
+                    handleVote('answer', target.dataset.answerId, target.dataset.voteType, target);
+                }
+
+                if (target.dataset.markAnswer) {
+                    handleMarkCorrect(target.dataset.markQuestion, target.dataset.markAnswer, target);
+                }
+
+                if (target.dataset.unmarkQuestion) {
+                    handleUnmarkCorrect(target.dataset.unmarkQuestion, target);
+                }
+            });
+        });
+
+        function handleVote(type, id, voteType, target) {
+            const url = type === 'question'
+                ? "{% url 'app:ajax_vote_question' %}"
+                : "{% url 'app:ajax_vote_answer' %}";
+
+            const data = type === 'question'
+                ? { question_id: id, vote_type: voteType }
+                : { answer_id: id, vote_type: voteType };
+
+            const votingContainer = target.closest('.question-voting, .answer-voting');
+            if (!votingContainer) return;
+
+            const countElem = votingContainer.querySelector('.vote-count');
+            const upBtn = votingContainer.querySelector('.vote-up');
+
+            if (!countElem || !upBtn) return;
+
+            upBtn.disabled = true;
+
+            ajaxRequest(url, 'POST', data, function(response) {
+                if (response.success) {
+                    countElem.textContent = response.likes_count;
+                    upBtn.classList.toggle('active', response.liked);
+                } else {
+                    alert(response.error || 'Error');
+                }
+            }, function(xhr) {
+                alert('Request failed');
+            });
+
+            setTimeout(() => upBtn.disabled = false, 500);
+        }
+
+        function handleMarkCorrect(questionId, answerId, target) {
+            target.disabled = true;
+
+            ajaxRequest("{% url 'app:ajax_mark_correct' %}", 'POST', {
+                question_id: questionId,
+                answer_id: answerId
+            }, function(response) {
+                if (response.success) {
+                    window.location.reload();
+                } else {
+                    alert(response.error || 'Error');
+                    target.disabled = false;
+                }
+            }, function(xhr) {
+                alert('Request failed');
+                target.disabled = false;
+            });
+        }
+
+        function handleUnmarkCorrect(questionId, target) {
+            target.disabled = true;
+
+            ajaxRequest("{% url 'app:ajax_unmark_correct' %}", 'POST', {
+                question_id: questionId
+            }, function(response) {
+                if (response.success) {
+                    window.location.reload();
+                } else {
+                    alert(response.error || 'Error');
+                    target.disabled = false;
+                }
+            }, function(xhr) {
+                alert('Request failed');
+                target.disabled = false;
+            });
+        }
+    </script>
+
+    {% block extra_js %}{% endblock %}
 </body>
 </html>

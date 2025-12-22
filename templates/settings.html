@@ -71,10 +71,10 @@
             <label for="id_avatar" class="form-label">Upload avatar</label>
             <div class="avatar-upload">
                 <div class="avatar-preview">
-                    {% if user_profile and user_profile.avatar %}
-                        <img src="{{ MEDIA_URL }}{{ user_profile.avatar.url }}" alt="Current avatar" class="current-avatar">
+                    {% if userprofile and userprofile.avatar %}
+                        <img src="{{ userprofile.avatar.url }}" alt="User Avatar" class="question-avatar" style="width: 80px; height: 80px; object-fit: cover;">
                     {% else %}
-                        <img src="{% static 'img/My_avatar.png' %}" alt="Current avatar" class="current-avatar">
+                        <img src="{% static 'img/My_avatar.png' %}" alt="User Avatar" class="question-avatar" style="width: 80px; height: 80px; object-fit: cover;">
                     {% endif %}
                     <span class="avatar-text">avatar</span>
                 </div>
