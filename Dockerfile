@@ -2,7 +2,6 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Устанавливаем системные зависимости для psycopg2
 RUN apt-get update && apt-get install -y \
     postgresql-client \
     libpq-dev \
@@ -18,6 +17,10 @@ RUN pip install -r requirements.txt
 
 COPY . .
 
-EXPOSE 8000
+RUN mkdir -p /app/static /app/uploads /app/staticfiles
 
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+RUN python3 manage.py collectstatic --noinput
+
+EXPOSE 8000 8081
+
+CMD ["gunicorn", "-c", "askme_chukhvichev/wsgi_config.py", "askme_chukhvichev.wsgi:application"]

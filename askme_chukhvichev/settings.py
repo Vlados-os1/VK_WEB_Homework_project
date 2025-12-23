@@ -6,7 +6,7 @@ load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-PROJECT_NAME = "ask_pupkin"
+PROJECT_NAME = "askme_chukhvichev"
 
 SECRET_KEY = os.getenv("SECRET_KEY", "!secret_key!")
 
@@ -36,7 +36,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'ask_pupkin.urls'
+ROOT_URLCONF = 'askme_chukhvichev.urls'
 
 TEMPLATES = [
     {
@@ -55,12 +55,12 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'ask_pupkin.wsgi.application'
+WSGI_APPLICATION = 'askme_chukhvichev.wsgi.application'
 
 DATABASES = {
     'default': {
         'ENGINE': os.getenv('DB_ENGINE', 'django.db.backends.postgresql'),
-        'NAME': os.getenv('DB_NAME', 'ask_pupkin'),
+        'NAME': os.getenv('DB_NAME', 'askme_chukhvichev'),
         'USER': os.getenv('DB_USER', 'postgres'),
         'PASSWORD': os.getenv('DB_PASSWORD', 'spring20'),
         'HOST': os.getenv('DB_HOST', 'localhost'),
@@ -92,6 +92,7 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static')
