@@ -1,17 +1,26 @@
 import json
+from django.core.cache import cache
 from django.views.generic import TemplateView
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.shortcuts import redirect, get_object_or_404
 from django.http import HttpRequest, JsonResponse
 from django.contrib import messages
 from django.conf import settings
-from django.db.models import Count
+from datetime import timedelta
+from django.utils import timezone
+from app.models import Tag
+from datetime import timedelta
+from django.utils import timezone
+from django.contrib.auth.models import User
+from django.db.models import Q, Count
 from django.urls import reverse
 from django.utils.decorators import method_decorator
 from django.contrib.auth import login
 from django.contrib.auth import logout
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.decorators.http import require_POST
+
+from app.centrifugo_utils import generate_centrifuge_token, publish_to_centrifuge
 from app.models import Question, Answer, Tag, QuestionLike, AnswerLike, UserProfile, CorrectAnswer
 from app.forms import LoginForm, AskForm, AnswerForm, SignupForm, SettingsForm
 
@@ -190,18 +199,78 @@ class AjaxUnmarkCorrectView(LoginRequiredMixin, TemplateView):
             return JsonResponse({'error': str(e)}, status=500)
 
 
+class SearchAutocompleteView(TemplateView):
+    def get(self, request, *args, **kwargs):
+        query = request.GET.get('q', '').strip()
+
+        if len(query) < 2:
+            return JsonResponse({'results': []})
+
+        # Ограничиваем количество запросов
+        cache_key = f'search_{hash(query)}'
+        cached_results = cache.get(cache_key)
+
+        if cached_results is not None:
+            return JsonResponse({'results': cached_results})
+
+        results = Question.objects.search(query)[:10]
+
+        serialized_results = [
+            {
+                'id': q.id,
+                'title': q.title,
+                'content': q.content[:100] + '...' if len(q.content) > 100 else q.content,
+                'url': reverse('app:question', args=[q.id])
+            }
+            for q in results
+        ]
+
+        # Кэшируем на 5 минут
+        cache.set(cache_key, serialized_results, 5 * 60)
+
+        return JsonResponse({'results': serialized_results})
+
 class BaseView(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        popular_tags = Tag.objects.annotate(
-            question_count=Count('question')
-        ).order_by('-question_count')[:10]
+        popular_tags = cache.get('popular_tags')
 
-        best_members = UserProfile.objects.select_related('user').annotate(
-            answer_count=Count('user__answer'),
-            question_count=Count('user__questions')
-        ).order_by('-answer_count', '-question_count')[:5]
+        popular_tags = cache.get('popular_tags')
+        if popular_tags is None:
+
+            three_months_ago = timezone.now() - timedelta(days=90)
+            popular_tags_queryset = Tag.objects.filter(
+                question__created_at__gte=three_months_ago,
+                question__is_active=True
+            ).annotate(
+                question_count=Count('question')
+            ).order_by('-question_count')[:10]
+
+            popular_tags = [tag.name for tag in popular_tags_queryset]
+            cache.set('popular_tags', popular_tags, 30)
+
+        best_members = cache.get('best_members')
+        if best_members is None:
+
+            one_week_ago = timezone.now() - timedelta(days=7)
+
+            best_members_queryset = User.objects.filter(
+                Q(questions__created_at__gte=one_week_ago) |
+                Q(answer__created_at__gte=one_week_ago) |
+                Q(questionlike__question__created_at__gte=one_week_ago) |
+                Q(answerlike__answer__created_at__gte=one_week_ago)
+            ).annotate(
+                total_score=(
+                        Count('questions', distinct=True) * 5 +
+                        Count('answer', distinct=True) * 3 +
+                        Count('questionlike', distinct=True) +
+                        Count('answerlike', distinct=True)
+                )
+            ).order_by('-total_score')[:10]
+
+            best_members = [member.username for member in best_members_queryset]
+            cache.set('best_members', best_members, 30)
 
         if self.request.user.is_authenticated:
             question_ids = Question.objects.values_list('id', flat=True)
@@ -340,6 +409,13 @@ class QuestionDetailView(LoginRequiredMixin, BaseView):
         if self.request.user.is_authenticated:
             context['answer_form'] = AnswerForm()
 
+        if self.request.user.is_authenticated:
+            token = generate_centrifuge_token(self.request.user.id)
+            context['centrifuge_token'] = token
+            context['centrifuge_url'] = settings.CENTRIFUGO_URL.replace("http://", "ws://").replace("https://",
+                                                                                                    "wss://")
+            context['centrifuge_channel'] = f"question_{kwargs.get('question_id')}"
+
         return context
 
     def post(self, request, *args, **kwargs):
@@ -350,6 +426,23 @@ class QuestionDetailView(LoginRequiredMixin, BaseView):
         if form.is_valid():
             try:
                 answer = form.save(author=request.user, question=question)
+
+                serialized_answer = {
+                    "id": answer.id,
+                    "content": answer.content,
+                    "author": {
+                        "id": answer.author.id,
+                        "username": answer.author.username
+                    },
+                    "created_at": answer.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+                    "question_id": question_id
+                }
+
+                publish_to_centrifuge(f"question_{question_id}", {
+                    "type": "new_answer",
+                    "answer": serialized_answer
+                })
+
                 return redirect(f'{reverse("app:question", args=[question_id])}#answer-{answer.id}')
             except Exception as e:
                 messages.error(request, f"An error occurred while saving your answer: {str(e)}")

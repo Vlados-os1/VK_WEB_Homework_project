@@ -21,6 +21,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.postgres',
 ]
 INSTALLED_APPS += [
     "app"
@@ -109,3 +110,14 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
+
+CENTRIFUGO_URL = os.getenv('CENTRIFUGO_URL', 'http://localhost:8010')
+CENTRIFUGO_API_KEY = os.getenv('API_KEY', 'my_api_key_for_django')
+CENTRIFUGO_HMAC_SECRET = os.getenv('TOKEN_HMAC_SECRET_KEY', 'my_secret_jwt_key_for_centrifugo')
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
+    }
+}

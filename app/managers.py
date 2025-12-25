@@ -39,6 +39,23 @@ class QuestionManager(DefaultManager):
             author_name=models.F('author__username')
         )
 
+    def search(self, query):
+        from django.contrib.postgres.search import SearchVector, SearchQuery, SearchRank
+
+        if not query:
+            return self.none()
+
+        search_vector = SearchVector('title', weight='A') + SearchVector('content', weight='B')
+        search_query = SearchQuery(query)
+
+        return self.active().annotate(
+            search=search_vector,
+            rank=SearchRank(search_vector, search_query)
+        ).filter(
+            Q(search=search_query) |
+            Q(title__icontains=query) |
+            Q(content__icontains=query)
+        ).order_by('-rank', '-created_at')
 
 class AnswerQuerySet(models.QuerySet):
     def best_answers(self):

@@ -2,7 +2,8 @@ from django.urls import path
 from app.views import (
     IndexView, HotQuestionsView, TagQuestionsView, QuestionDetailView,
     LoginView, SignupView, SettingsView, AskQuestionView, LogoutView,
-    AjaxVoteQuestionView, AjaxVoteAnswerView, AjaxMarkCorrectView, AjaxUnmarkCorrectView
+    AjaxVoteQuestionView, AjaxVoteAnswerView, AjaxMarkCorrectView,
+    AjaxUnmarkCorrectView, SearchAutocompleteView,
 )
 
 app_name = 'app'
@@ -22,4 +23,5 @@ urlpatterns = [
     path('ajax/answer/vote/', AjaxVoteAnswerView.as_view(), name='ajax_vote_answer'),
     path('ajax/mark-correct/', AjaxMarkCorrectView.as_view(), name='ajax_mark_correct'),
     path('ajax/unmark-correct/', AjaxUnmarkCorrectView.as_view(), name='ajax_unmark_correct'),
+    path('search/autocomplete/', SearchAutocompleteView.as_view(), name='search_autocomplete'),
 ]

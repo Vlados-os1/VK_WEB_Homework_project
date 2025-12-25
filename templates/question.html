@@ -7,6 +7,75 @@
     <link rel="stylesheet" href="{% static 'css/question.css' %}">
 {% endblock %}
 
+{% block extra_js %}
+    <script src="https://unpkg.com/centrifuge@5.4.0/dist/centrifuge.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        {% if user.is_authenticated and centrifuge_token and centrifuge_channel %}
+        const centrifuge = new Centrifuge('{{ centrifuge_url }}/connection/websocket', {
+            token: '{{ centrifuge_token }}'
+        });
+
+        const sub = centrifuge.newSubscription('{{ centrifuge_channel }}');
+
+        sub.on('publication', function(ctx) {
+            const data = ctx.data;
+            if (data.type === 'new_answer' && data.answer) {
+                const answer = data.answer;
+
+                const answersContainer = document.querySelector('.answers-section');
+                const newAnswer = document.createElement('div');
+                newAnswer.className = 'answer-item';
+                newAnswer.id = 'answer-' + answer.id;
+
+                newAnswer.innerHTML = `
+                    <div class="answer-header">
+                        <div class="answer-voting">
+                            <button type="button" class="vote-btn vote-up" data-answer-id="${answer.id}" data-vote-type="up" disabled title="Please login to vote">
+                                ▲
+                            </button>
+                            <span class="vote-count" data-answer-id="${answer.id}">0</span>
+                            <button type="button" class="vote-btn vote-down" data-answer-id="${answer.id}" data-vote-type="down" disabled title="Please login to vote">
+                                ▼
+                            </button>
+                        </div>
+                        <img src="{% static 'img/Ask_avatar.png' %}" alt="User Avatar" class="answer-avatar">
+                        <div class="answer-info">
+                            <span class="answer-author">${answer.author.username}</span>
+                            <span class="answer-date">${answer.created_at}</span>
+                        </div>
+                    </div>
+                    <div class="answer-content">
+                        <p>${answer.content}</p>
+                    </div>
+                `;
+
+                const answerForm = document.querySelector('.answer-form-section');
+                if (answerForm) {
+                    answersContainer.insertBefore(newAnswer, answerForm);
+                } else {
+                    answersContainer.appendChild(newAnswer);
+                }
+
+                const answersTitle = document.querySelector('.answers-title');
+                if (answersTitle) {
+                    const count = document.querySelectorAll('.answer-item').length;
+                    answersTitle.textContent = `Answers (${count})`;
+                }
+
+                setTimeout(() => {
+                    newAnswer.scrollIntoView({ behavior: 'smooth' });
+                }, 100);
+            }
+        });
+
+        sub.subscribe();
+        centrifuge.connect();
+        {% endif %}
+    });
+    </script>
+{% endblock %}
+
 {% block content %}
 {% include "components/question_item.html" with question=question detailed=True %}
 

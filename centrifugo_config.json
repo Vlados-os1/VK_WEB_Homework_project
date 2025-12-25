@@ -1,0 +1,16 @@
+{
+  "token_hmac_secret_key": "my_secret_jwt_key_for_centrifugo",
+  "admin_password": "admin",
+  "admin_secret": "admin_secret",
+  "api_key": "my_api_key_for_django",
+  "allowed_origins": ["http://localhost:80", "http://localhost"],
+  "port": 8010,
+  "admin": true,
+  "prometheus": false,
+  "engine": "memory",
+  "client_anonymous": false,
+  "client_concurrency": 16,
+  "history_size": 10,
+  "history_ttl": "300s",
+  "presence": true
+}
