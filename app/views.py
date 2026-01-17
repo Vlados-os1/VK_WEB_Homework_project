@@ -1,6 +1,6 @@
 import json
 from django.core.cache import cache
-from django.views.generic import TemplateView
+from django.views.generic import TemplateView, FormView, View
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.shortcuts import redirect, get_object_or_404
 from django.http import HttpRequest, JsonResponse
@@ -8,15 +8,11 @@ from django.contrib import messages
 from django.conf import settings
 from datetime import timedelta
 from django.utils import timezone
-from app.models import Tag
-from datetime import timedelta
-from django.utils import timezone
 from django.contrib.auth.models import User
 from django.db.models import Q, Count
 from django.urls import reverse
 from django.utils.decorators import method_decorator
-from django.contrib.auth import login
-from django.contrib.auth import logout
+from django.contrib.auth import login, logout
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.decorators.http import require_POST
 
@@ -37,8 +33,97 @@ def paginate(objects_list, request: HttpRequest, per_page=3):
 
     return page
 
+
+class AsideMixin:
+    def get_aside_context(self):
+        context = {}
+
+        popular_tags = cache.get('popular_tags')
+        if popular_tags is None:
+            three_months_ago = timezone.now() - timedelta(days=90)
+            popular_tags_queryset = Tag.objects.filter(
+                question__created_at__gte=three_months_ago,
+                question__is_active=True
+            ).annotate(
+                question_count=Count('question')
+            ).order_by('-question_count')[:10]
+
+            popular_tags = [tag.name for tag in popular_tags_queryset]
+            cache.set('popular_tags', popular_tags, 300)  # 5 минут
+
+        context['tags'] = popular_tags
+
+        best_members = cache.get('best_members')
+        if best_members is None:
+            one_week_ago = timezone.now() - timedelta(days=7)
+
+            best_members_queryset = User.objects.filter(
+                Q(questions__created_at__gte=one_week_ago) |
+                Q(answer__created_at__gte=one_week_ago) |
+                Q(questionlike__question__created_at__gte=one_week_ago) |
+                Q(answerlike__answer__created_at__gte=one_week_ago)
+            ).annotate(
+                total_score=(
+                        Count('questions', distinct=True) * 5 +
+                        Count('answer', distinct=True) * 3 +
+                        Count('questionlike', distinct=True) +
+                        Count('answerlike', distinct=True)
+                )
+            ).order_by('-total_score')[:10]
+
+            best_members = [member.username for member in best_members_queryset]
+            cache.set('best_members', best_members, 300)  # 5 минут
+
+        context['members'] = best_members
+
+        context['MEDIA_URL'] = settings.MEDIA_URL
+        context['USER_FILES_URL'] = settings.USER_FILES_URL
+
+        if self.request.user.is_authenticated:
+            user_profile, created = UserProfile.objects.get_or_create(user=self.request.user)
+            context['userprofile'] = user_profile
+            context['user_profile'] = user_profile
+            context['user'] = {
+                'is_authenticated': True,
+                'username': self.request.user.username,
+                'profile': user_profile
+            }
+        else:
+            context['userprofile'] = None
+            context['user_profile'] = None
+            context['user'] = {
+                'is_authenticated': False,
+                'username': 'Guest'
+            }
+
+        return context
+
+    def get_likes_context(self):
+        if self.request.user.is_authenticated:
+            question_ids = Question.objects.values_list('id', flat=True)
+            user_liked_questions = QuestionLike.objects.filter(
+                question_id__in=question_ids,
+                user=self.request.user
+            ).values_list('question_id', flat=True)
+
+            answer_ids = Answer.objects.values_list('id', flat=True)
+            user_liked_answers = AnswerLike.objects.filter(
+                answer_id__in=answer_ids,
+                user=self.request.user
+            ).values_list('answer_id', flat=True)
+
+            return {
+                'user_liked_questions': list(user_liked_questions),
+                'user_liked_answers': list(user_liked_answers)
+            }
+        return {
+            'user_liked_questions': [],
+            'user_liked_answers': []
+        }
+
+
 @method_decorator(require_POST, name='dispatch')
-class AjaxVoteQuestionView(LoginRequiredMixin, TemplateView):
+class AjaxVoteQuestionView(LoginRequiredMixin, View):
     login_url = '/login/'
     redirect_field_name = 'next'
 
@@ -81,7 +166,7 @@ class AjaxVoteQuestionView(LoginRequiredMixin, TemplateView):
 
 
 @method_decorator(require_POST, name='dispatch')
-class AjaxVoteAnswerView(LoginRequiredMixin, TemplateView):
+class AjaxVoteAnswerView(LoginRequiredMixin, View):
     login_url = '/login/'
     redirect_field_name = 'next'
 
@@ -124,7 +209,7 @@ class AjaxVoteAnswerView(LoginRequiredMixin, TemplateView):
 
 
 @method_decorator(require_POST, name='dispatch')
-class AjaxMarkCorrectView(LoginRequiredMixin, TemplateView):
+class AjaxMarkCorrectView(LoginRequiredMixin, View):
     login_url = '/login/'
     redirect_field_name = 'next'
 
@@ -145,7 +230,7 @@ class AjaxMarkCorrectView(LoginRequiredMixin, TemplateView):
 
             if question.author != request.user:
                 return JsonResponse({'error': 'Only the author of the question can mark the correct answer.'},
-                                   status=403)
+                                    status=403)
             if answer.question != question:
                 return JsonResponse({'error': 'The answer does not belong to the question.'}, status=400)
 
@@ -167,7 +252,7 @@ class AjaxMarkCorrectView(LoginRequiredMixin, TemplateView):
 
 
 @method_decorator(require_POST, name='dispatch')
-class AjaxUnmarkCorrectView(LoginRequiredMixin, TemplateView):
+class AjaxUnmarkCorrectView(LoginRequiredMixin, View):
     login_url = '/login/'
     redirect_field_name = 'next'
 
@@ -187,7 +272,7 @@ class AjaxUnmarkCorrectView(LoginRequiredMixin, TemplateView):
             question = get_object_or_404(Question, id=question_id)
             if question.author != request.user:
                 return JsonResponse({'error': 'Only the author of the question can unmark the correct answer.'},
-                                   status=403)
+                                    status=403)
             CorrectAnswer.objects.filter(question=question).delete()
             return JsonResponse({
                 'success': True,
@@ -199,14 +284,13 @@ class AjaxUnmarkCorrectView(LoginRequiredMixin, TemplateView):
             return JsonResponse({'error': str(e)}, status=500)
 
 
-class SearchAutocompleteView(TemplateView):
+class SearchAutocompleteView(View):
     def get(self, request, *args, **kwargs):
         query = request.GET.get('q', '').strip()
 
         if len(query) < 2:
             return JsonResponse({'results': []})
 
-        # Ограничиваем количество запросов
         cache_key = f'search_{hash(query)}'
         cached_results = cache.get(cache_key)
 
@@ -225,103 +309,25 @@ class SearchAutocompleteView(TemplateView):
             for q in results
         ]
 
-        # Кэшируем на 5 минут
         cache.set(cache_key, serialized_results, 5 * 60)
 
         return JsonResponse({'results': serialized_results})
 
-class BaseView(TemplateView):
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
 
-        popular_tags = cache.get('popular_tags')
-
-        popular_tags = cache.get('popular_tags')
-        if popular_tags is None:
-
-            three_months_ago = timezone.now() - timedelta(days=90)
-            popular_tags_queryset = Tag.objects.filter(
-                question__created_at__gte=three_months_ago,
-                question__is_active=True
-            ).annotate(
-                question_count=Count('question')
-            ).order_by('-question_count')[:10]
-
-            popular_tags = [tag.name for tag in popular_tags_queryset]
-            cache.set('popular_tags', popular_tags, 30)
-
-        best_members = cache.get('best_members')
-        if best_members is None:
-
-            one_week_ago = timezone.now() - timedelta(days=7)
-
-            best_members_queryset = User.objects.filter(
-                Q(questions__created_at__gte=one_week_ago) |
-                Q(answer__created_at__gte=one_week_ago) |
-                Q(questionlike__question__created_at__gte=one_week_ago) |
-                Q(answerlike__answer__created_at__gte=one_week_ago)
-            ).annotate(
-                total_score=(
-                        Count('questions', distinct=True) * 5 +
-                        Count('answer', distinct=True) * 3 +
-                        Count('questionlike', distinct=True) +
-                        Count('answerlike', distinct=True)
-                )
-            ).order_by('-total_score')[:10]
-
-            best_members = [member.username for member in best_members_queryset]
-            cache.set('best_members', best_members, 30)
-
-        if self.request.user.is_authenticated:
-            question_ids = Question.objects.values_list('id', flat=True)
-            user_liked_questions = QuestionLike.objects.filter(
-                question_id__in=question_ids,
-                user=self.request.user
-            ).values_list('question_id', flat=True)
-
-            answer_ids = Answer.objects.values_list('id', flat=True)
-            user_liked_answers = AnswerLike.objects.filter(
-                answer_id__in=answer_ids,
-                user=self.request.user
-            ).values_list('answer_id', flat=True)
-
-            context['user_liked_questions'] = list(user_liked_questions)
-            context['user_liked_answers'] = list(user_liked_answers)
-        else:
-            context['user_liked_questions'] = []
-            context['user_liked_answers'] = []
-        context.update({
-            'members': [member.user for member in best_members],
-            'tags': [tag.name for tag in popular_tags],
-            'user': {
-                'is_authenticated': self.request.user.is_authenticated,
-                'username': self.request.user.username if self.request.user.is_authenticated else 'Guest'
-            },
-            'USER_FILES_URL': settings.USER_FILES_URL,
-        })
-
-        context['MEDIA_URL'] = settings.MEDIA_URL
-
-        if self.request.user.is_authenticated:
-            user_profile, created = UserProfile.objects.get_or_create(user=self.request.user)
-            context['userprofile'] = user_profile
-            context['user_profile'] = user_profile
-        else:
-            context['userprofile'] = None
-            context['user_profile'] = None
-
-        return context
-
-
-class IndexView(BaseView):
+class IndexView(AsideMixin, TemplateView):
     template_name = 'index.html'
     paginate_by = 3
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
+        aside_context = self.get_aside_context()
+        likes_context = self.get_likes_context()
+        context.update(aside_context)
+        context.update(likes_context)
+
         questions = Question.objects.new_questions()
-        user_liked_questions = context.get('user_liked_questions', [])
+        user_liked_questions = likes_context.get('user_liked_questions', [])
         for question in questions:
             question.is_liked_by_user = question.id in user_liked_questions
         page = paginate(questions, self.request, self.paginate_by)
@@ -331,14 +337,22 @@ class IndexView(BaseView):
         return context
 
 
-class HotQuestionsView(BaseView):
+class HotQuestionsView(AsideMixin, TemplateView):
     template_name = 'index.html'
     paginate_by = 3
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        aside_context = self.get_aside_context()
+        likes_context = self.get_likes_context()
+        context.update(aside_context)
+        context.update(likes_context)
 
         questions = Question.objects.best_questions()
+        user_liked_questions = likes_context.get('user_liked_questions', [])
+
+        for question in questions:
+            question.is_liked_by_user = question.id in user_liked_questions
 
         page = paginate(questions, self.request, self.paginate_by)
         context['page'] = page
@@ -347,17 +361,25 @@ class HotQuestionsView(BaseView):
         return context
 
 
-class TagQuestionsView(BaseView):
+class TagQuestionsView(AsideMixin, TemplateView):
     template_name = 'index.html'
     paginate_by = 3
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        aside_context = self.get_aside_context()
+        likes_context = self.get_likes_context()
+        context.update(aside_context)
+        context.update(likes_context)
 
         tag_name = kwargs.get('tag_name')
         tag = get_object_or_404(Tag, name=tag_name)
 
         questions = Question.objects.select_related('author').prefetch_related('tags').filter(tags=tag)
+        user_liked_questions = likes_context.get('user_liked_questions', [])
+
+        for question in questions:
+            question.is_liked_by_user = question.id in user_liked_questions
 
         page = paginate(questions, self.request, self.paginate_by)
         context['page'] = page
@@ -367,13 +389,17 @@ class TagQuestionsView(BaseView):
         return context
 
 
-class QuestionDetailView(LoginRequiredMixin, BaseView):
+class QuestionDetailView(LoginRequiredMixin, AsideMixin, TemplateView):
     template_name = 'question.html'
     login_url = '/login/'
     redirect_field_name = 'next'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        aside_context = self.get_aside_context()
+        likes_context = self.get_likes_context()
+        context.update(aside_context)
+        context.update(likes_context)
 
         question_id = kwargs.get('question_id')
         question = get_object_or_404(Question.objects.select_related('author').prefetch_related('tags'), id=question_id)
@@ -388,8 +414,8 @@ class QuestionDetailView(LoginRequiredMixin, BaseView):
         if hasattr(question, 'correct_answer'):
             correct_answer_id = question.correct_answer.answer_id
 
-        user_liked_answers = context.get('user_liked_answers', [])
-        user_liked_questions = context.get('user_liked_questions', [])
+        user_liked_answers = likes_context.get('user_liked_answers', [])
+        user_liked_questions = likes_context.get('user_liked_questions', [])
 
         question.is_liked_by_user = question.id in user_liked_questions
 
@@ -399,22 +425,36 @@ class QuestionDetailView(LoginRequiredMixin, BaseView):
 
         page = paginate(answers, self.request, per_page=3)
 
-        context.update({
-            'question': question,
-            'answers': page.object_list,
-            'page': page,
-            'is_question_author': is_author
-        })
-
         if self.request.user.is_authenticated:
             context['answer_form'] = AnswerForm()
 
         if self.request.user.is_authenticated:
             token = generate_centrifuge_token(self.request.user.id)
             context['centrifuge_token'] = token
-            context['centrifuge_url'] = settings.CENTRIFUGO_URL.replace("http://", "ws://").replace("https://",
-                                                                                                    "wss://")
-            context['centrifuge_channel'] = f"question_{kwargs.get('question_id')}"
+
+            centrifuge_url = settings.CENTRIFUGO_URL
+
+            if centrifuge_url.startswith('ws://') or centrifuge_url.startswith('wss://'):
+                pass
+            elif centrifuge_url.startswith('http://'):
+                centrifuge_url = centrifuge_url.replace('http://', 'ws://', 1)
+            elif centrifuge_url.startswith('https://'):
+                centrifuge_url = centrifuge_url.replace('https://', 'wss://', 1)
+            elif centrifuge_url.startswith('//'):
+                if settings.DEBUG:
+                    centrifuge_url = 'ws:' + centrifuge_url
+                else:
+                    centrifuge_url = 'wss:' + centrifuge_url
+
+            context['centrifuge_url'] = centrifuge_url
+            context['centrifuge_channel'] = f"question_{question_id}"
+
+        context.update({
+            'question': question,
+            'answers': page.object_list,
+            'page': page,
+            'is_question_author': is_author
+        })
 
         return context
 
@@ -452,117 +492,101 @@ class QuestionDetailView(LoginRequiredMixin, BaseView):
         return self.render_to_response(context)
 
 
-class AskQuestionView(LoginRequiredMixin, BaseView):
+class AskQuestionFormView(LoginRequiredMixin, AsideMixin, FormView):
     template_name = 'ask.html'
+    form_class = AskForm
     login_url = '/login/'
     redirect_field_name = 'next'
 
-    def get(self, request, *args, **kwargs):
-        context = self.get_context_data()
-        context['form'] = AskForm()
-        return self.render_to_response(context)
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        return kwargs
 
-    def post(self, request, *args, **kwargs):
-        form = AskForm(request.POST)
-        if form.is_valid():
-            try:
-                question = form.save(author=request.user)
-                return redirect('app:question', question_id=question.id)
-            except Exception as e:
-                messages.error(request, f"An error occurred while saving your question: {str(e)}")
+    def form_valid(self, form):
+        question = form.save(author=self.request.user)
+        return redirect('app:question', question_id=question.id)
 
-        context = self.get_context_data()
-        context['form'] = form
-        return self.render_to_response(context)
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(self.get_aside_context())
+        return context
 
 
-class SettingsView(LoginRequiredMixin, BaseView):
+class SettingsFormView(LoginRequiredMixin, AsideMixin, FormView):
     template_name = 'settings.html'
+    form_class = SettingsForm
     login_url = '/login/'
     redirect_field_name = 'next'
 
-    def get(self, request, *args, **kwargs):
-        user_profile, created = UserProfile.objects.get_or_create(user=request.user)
-        form = SettingsForm(instance=user_profile, user=request.user)
-        context = self.get_context_data()
-        context['form'] = form
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        user_profile, created = UserProfile.objects.get_or_create(user=self.request.user)
+        kwargs['instance'] = user_profile
+        kwargs['user'] = self.request.user
+        return kwargs
+
+    def form_valid(self, form):
+        _ = form.save()
+        self.request.user.username = form.cleaned_data['login']
+        self.request.user.email = form.cleaned_data['email']
+        self.request.user.save()
+        messages.success(self.request, "Settings updated successfully!")
+        return redirect('app:settings')
+
+    def form_invalid(self, form):
+        messages.error(self.request, "Please correct the errors below.")
+        return super().form_invalid(form)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(self.get_aside_context())
+        user_profile, created = UserProfile.objects.get_or_create(user=self.request.user)
         context['user_profile'] = user_profile
-        return self.render_to_response(context)
-
-    def post(self, request, *args, **kwargs):
-        user_profile, created = UserProfile.objects.get_or_create(user=request.user)
-        form = SettingsForm(
-            request.POST,
-            request.FILES,
-            instance=user_profile,
-            user=request.user
-        )
-
-        if form.is_valid():
-            form.save()
-
-            request.user.username = form.cleaned_data['login']
-            request.user.email = form.cleaned_data['email']
-            request.user.save()
-
-            messages.success(request, "Settings updated successfully!")
-            return redirect('app:settings')
-        else:
-            messages.error(request, "Please correct the errors below.")
-
-        context = self.get_context_data()
-        context['form'] = form
-        context['user_profile'] = user_profile
-        return self.render_to_response(context)
+        return context
 
 
-class LoginView(BaseView):
+class LoginFormView(AsideMixin, FormView):
     template_name = 'login.html'
+    form_class = LoginForm
 
-    def get(self, request, *args, **kwargs):
+    def dispatch(self, request, *args, **kwargs):
         if request.user.is_authenticated:
             next_url = request.GET.get('next', 'app:index')
             return redirect(next_url)
-        context = self.get_context_data()
-        context['form'] = LoginForm()
-        return self.render_to_response(context)
+        return super().dispatch(request, *args, **kwargs)
 
-    def post(self, request, *args, **kwargs):
-        form = LoginForm(data=request.POST)
-        if form.is_valid():
-            login(request, form.get_user())
-            next_url = request.GET.get('next', 'app:index')
-            return redirect(next_url)
+    def form_valid(self, form):
+        login(self.request, form.get_user())
+        next_url = self.request.GET.get('next', 'app:index')
+        return redirect(next_url)
 
-        context = self.get_context_data()
-        context['form'] = form
-        return self.render_to_response(context)
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(self.get_aside_context())
+        return context
 
-class SignupView(BaseView):
+
+class SignupFormView(AsideMixin, FormView):
     template_name = 'signup.html'
+    form_class = SignupForm
 
-    def get(self, request, *args, **kwargs):
+    def dispatch(self, request, *args, **kwargs):
         if request.user.is_authenticated:
             return redirect('app:index')
-        context = self.get_context_data()
-        context['form'] = SignupForm()
-        return self.render_to_response(context)
+        return super().dispatch(request, *args, **kwargs)
 
-    def post(self, request, *args, **kwargs):
-        form = SignupForm(request.POST, request.FILES)
+    def form_valid(self, form):
+        user = form.save()
+        login(self.request, user)
+        return redirect('app:index')
 
-        if form.is_valid():
-            user = form.save()
-
-            login(request, user)
-            return redirect('app:index')
-
-        context = self.get_context_data()
-        context['form'] = form
-        return self.render_to_response(context)
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(self.get_aside_context())
+        return context
 
 
-class LogoutView(BaseView):
+class LogoutView(View):
     def get(self, request, *args, **kwargs):
         next_url = request.GET.get('next', 'app:index')
         logout(request)

@@ -31,6 +31,7 @@ class SignupForm(UserCreationForm):
     )
     nickname = forms.CharField(
         max_length=30,
+        min_length=2,
         required=True,
         widget=forms.TextInput(attrs={
             'class': 'form-input',
@@ -79,27 +80,11 @@ class SignupForm(UserCreationForm):
             'unique': 'This email is already registered.',
         }
 
-    def clean_username(self):
-        username = self.cleaned_data.get('username')
-        if len(username) < 3:
-            raise ValidationError("Username must be at least 3 characters long.")
-        if not username.isalnum():
-            raise ValidationError("Username can only contain letters and numbers.")
-        return username
-
     def clean_email(self):
         email = self.cleaned_data.get('email')
         if User.objects.filter(email=email).exists():
             raise ValidationError("This email is already registered. Please use a different email or login.")
         return email
-
-    def clean_nickname(self):
-        nickname = self.cleaned_data.get('nickname')
-        if not nickname:
-            raise ValidationError("Please enter a nickname.")
-        if len(nickname) < 2:
-            raise ValidationError("Nickname must be at least 2 characters long.")
-        return nickname
 
     def clean_avatar(self):
         avatar = self.cleaned_data.get('avatar')
@@ -113,16 +98,6 @@ class SignupForm(UserCreationForm):
                 raise ValidationError("Unsupported file type. Allowed: JPG, PNG, GIF.")
 
         return avatar
-
-    def clean(self):
-        cleaned_data = super().clean()
-        password1 = cleaned_data.get('password1')
-        password2 = cleaned_data.get('password2')
-
-        if password1 and password2 and password1 != password2:
-            self.add_error('password2', "Passwords do not match.")
-
-        return cleaned_data
 
     def save(self, commit=True):
         with transaction.atomic():

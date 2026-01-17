@@ -1,6 +1,32 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.db.models import Count, Q
+from django.contrib.postgres.search import SearchVector, SearchQuery, SearchRank
+
+
+class SearchManagerMixin:
+
+    def search(self, query):
+        if not query or not hasattr(self, 'psql_field_weights'):
+            return self.get_queryset().none()
+
+        search_vector = None
+        for field, weight in self.psql_field_weights.items():
+            if search_vector is None:
+                search_vector = SearchVector(field, weight=weight)
+            else:
+                search_vector += SearchVector(field, weight=weight)
+
+        search_query = SearchQuery(query)
+
+        queryset = self.get_queryset().annotate(
+            rank=SearchRank(search_vector, search_query),
+            search_vector=search_vector
+        ).filter(
+            search_vector=search_query
+        ).order_by('-rank')
+
+        return queryset
 
 
 class DefaultManager(models.Manager):
@@ -8,7 +34,10 @@ class DefaultManager(models.Manager):
         return self.filter(is_active=True)
 
 
-class QuestionManager(DefaultManager):
+class QuestionManager(SearchManagerMixin, DefaultManager):
+    psql_field_weights = {'title': "A", 'content': "B"}
+    use_in_migrations = True
+
     def best_questions(self):
         return self.active().select_related('author').prefetch_related('tags').annotate(
             likes_count=Count('questionlike', distinct=True),
@@ -20,7 +49,8 @@ class QuestionManager(DefaultManager):
         return self.active().select_related('author').prefetch_related('tags').order_by('-created_at')
 
     def with_tags(self, tag_names):
-        return self.active().select_related('author').prefetch_related('tags').filter(tags__name__in=tag_names).distinct()
+        return self.active().select_related('author').prefetch_related('tags').filter(
+            tags__name__in=tag_names).distinct()
 
     def hot_questions(self):
         return self.active().select_related('author').prefetch_related('tags').annotate(
@@ -39,23 +69,6 @@ class QuestionManager(DefaultManager):
             author_name=models.F('author__username')
         )
 
-    def search(self, query):
-        from django.contrib.postgres.search import SearchVector, SearchQuery, SearchRank
-
-        if not query:
-            return self.none()
-
-        search_vector = SearchVector('title', weight='A') + SearchVector('content', weight='B')
-        search_query = SearchQuery(query)
-
-        return self.active().annotate(
-            search=search_vector,
-            rank=SearchRank(search_vector, search_query)
-        ).filter(
-            Q(search=search_query) |
-            Q(title__icontains=query) |
-            Q(content__icontains=query)
-        ).order_by('-rank', '-created_at')
 
 class AnswerQuerySet(models.QuerySet):
     def best_answers(self):
