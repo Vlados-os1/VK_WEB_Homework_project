@@ -1,13 +1,20 @@
 .ask-form-section {
-    max-width: 600px;
+    max-width: 700px;
     margin: 0 auto;
+    background: white;
+    border-radius: 8px;
+    padding: 30px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
 .ask-title {
-    font-size: 24px;
-    margin-bottom: 25px;
+    font-size: 26px;
+    margin-bottom: 30px;
     color: #333;
     text-align: center;
+    font-weight: 600;
+    border-bottom: 2px solid #f0f0f0;
+    padding-bottom: 15px;
 }
 
 .ask-form {
@@ -18,43 +25,51 @@
 }
 
 .form-group {
-    margin-bottom: 18px;
+    margin-bottom: 20px;
 }
 
 .form-label {
     display: block;
-    margin-bottom: 6px;
-    font-weight: bold;
-    color: #333;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #495057;
+    font-size: 15px;
 }
 
-.form-input {
+.form-input, .form-textarea {
     width: 100%;
-    padding: 10px;
+    padding: 12px 15px;
     border: 1px solid #ced4da;
     border-radius: 4px;
     font-size: 14px;
+    font-family: Arial, sans-serif;
+    color: #333;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    background: white;
+}
+
+.form-input:focus, .form-textarea:focus {
+    outline: none;
+    border-color: #4a6fa5;
+    box-shadow: 0 0 0 3px rgba(74, 111, 165, 0.1);
 }
 
 .form-textarea {
-    width: 100%;
-    min-height: 120px;
-    padding: 10px;
-    border: 1px solid #ced4da;
-    border-radius: 4px;
-    font-size: 14px;
+    min-height: 150px;
     resize: vertical;
+    line-height: 1.5;
 }
 
 .form-hint {
     font-size: 12px;
-    color: #666;
-    margin-top: 4px;
+    color: #6c757d;
+    margin-top: 5px;
+    font-style: italic;
 }
 
 .ask-button {
     width: 150px;
-    padding: 12px;
+    padding: 12px 25px;
     background: #4a6fa5;
     color: white;
     border: none;
@@ -63,5 +78,63 @@
     font-weight: bold;
     cursor: pointer;
     display: block;
-    margin: 0 auto;
+    margin: 30px auto 0;
+    transition: all 0.3s ease;
+}
+
+.ask-button:hover {
+    background: #3a5a8a;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.ask-button:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Error styles */
+.error-message {
+    background: #ff6b6b;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 4px;
+    margin-bottom: 25px;
+    text-align: center;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.field-error {
+    color: #dc3545;
+    font-size: 12px;
+    margin-top: 5px;
+    padding: 5px 0;
+}
+
+.field-error span {
+    display: block;
+    margin-top: 3px;
+    padding-left: 5px;
+}
+
+@media (max-width: 768px) {
+    .ask-form-section {
+        padding: 20px;
+        margin: 0 10px;
+    }
+
+    .ask-form {
+        padding: 20px;
+    }
+
+    .ask-title {
+        font-size: 22px;
+        margin-bottom: 20px;
+    }
+
+    .ask-button {
+        width: 100%;
+        max-width: 200px;
+    }
 }

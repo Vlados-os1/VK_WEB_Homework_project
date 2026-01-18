@@ -1,7 +1,8 @@
 from django.urls import path
 from app.views import (
     IndexView, HotQuestionsView, TagQuestionsView, QuestionDetailView,
-    LoginView, SignupView, SettingsView, AskQuestionView, LogoutView,
+    LoginFormView, SignupFormView, SettingsFormView,
+    AskQuestionFormView, LogoutView,
     AjaxVoteQuestionView, AjaxVoteAnswerView, AjaxMarkCorrectView,
     AjaxUnmarkCorrectView, SearchAutocompleteView,
 )
@@ -13,10 +14,10 @@ urlpatterns = [
     path('hot/', HotQuestionsView.as_view(), name='hot'),
     path('tag/<str:tag_name>/', TagQuestionsView.as_view(), name='tag'),
     path('question/<int:question_id>/', QuestionDetailView.as_view(), name='question'),
-    path('login/', LoginView.as_view(), name='login'),
-    path('signup/', SignupView.as_view(), name='signup'),
-    path('settings/', SettingsView.as_view(), name='settings'),
-    path('ask/', AskQuestionView.as_view(), name='ask'),
+    path('login/', LoginFormView.as_view(), name='login'),
+    path('signup/', SignupFormView.as_view(), name='signup'),
+    path('settings/', SettingsFormView.as_view(), name='settings'),
+    path('ask/', AskQuestionFormView.as_view(), name='ask'),
     path('logout/', LogoutView.as_view(), name='logout'),
 
     path('ajax/question/vote/', AjaxVoteQuestionView.as_view(), name='ajax_vote_question'),

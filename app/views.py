@@ -122,6 +122,41 @@ class AsideMixin:
         }
 
 
+class CentrifugoMixin:
+    def get_centrifugo_context(self, channel=None, question=None):
+        if not self.request.user.is_authenticated:
+            return {}
+
+        token = generate_centrifuge_token(self.request.user.id)
+        centrifuge_url = settings.CENTRIFUGO_URL
+
+        if centrifuge_url.startswith('ws://') or centrifuge_url.startswith('wss://'):
+            pass
+        elif centrifuge_url.startswith('http://'):
+            centrifuge_url = centrifuge_url.replace('http://', 'ws://', 1)
+        elif centrifuge_url.startswith('https://'):
+            centrifuge_url = centrifuge_url.replace('https://', 'wss://', 1)
+        elif centrifuge_url.startswith('//'):
+            if settings.DEBUG:
+                centrifuge_url = 'ws:' + centrifuge_url
+            else:
+                centrifuge_url = 'wss:' + centrifuge_url
+
+        context = {
+            'centrifuge_token': token,
+            'centrifuge_url': centrifuge_url,
+        }
+
+        final_channel = channel
+        if not final_channel and question and hasattr(question, 'get_centrifugo_channel'):
+            final_channel = question.get_centrifugo_channel()
+
+        if final_channel:
+            context['centrifuge_channel'] = final_channel
+
+        return context
+
+
 @method_decorator(require_POST, name='dispatch')
 class AjaxVoteQuestionView(LoginRequiredMixin, View):
     login_url = '/login/'
@@ -389,7 +424,7 @@ class TagQuestionsView(AsideMixin, TemplateView):
         return context
 
 
-class QuestionDetailView(LoginRequiredMixin, AsideMixin, TemplateView):
+class QuestionDetailView(LoginRequiredMixin, AsideMixin, CentrifugoMixin, TemplateView):
     template_name = 'question.html'
     login_url = '/login/'
     redirect_field_name = 'next'
@@ -428,26 +463,8 @@ class QuestionDetailView(LoginRequiredMixin, AsideMixin, TemplateView):
         if self.request.user.is_authenticated:
             context['answer_form'] = AnswerForm()
 
-        if self.request.user.is_authenticated:
-            token = generate_centrifuge_token(self.request.user.id)
-            context['centrifuge_token'] = token
-
-            centrifuge_url = settings.CENTRIFUGO_URL
-
-            if centrifuge_url.startswith('ws://') or centrifuge_url.startswith('wss://'):
-                pass
-            elif centrifuge_url.startswith('http://'):
-                centrifuge_url = centrifuge_url.replace('http://', 'ws://', 1)
-            elif centrifuge_url.startswith('https://'):
-                centrifuge_url = centrifuge_url.replace('https://', 'wss://', 1)
-            elif centrifuge_url.startswith('//'):
-                if settings.DEBUG:
-                    centrifuge_url = 'ws:' + centrifuge_url
-                else:
-                    centrifuge_url = 'wss:' + centrifuge_url
-
-            context['centrifuge_url'] = centrifuge_url
-            context['centrifuge_channel'] = f"question_{question_id}"
+        centrifugo_context = self.get_centrifugo_context(question=question)
+        context.update(centrifugo_context)
 
         context.update({
             'question': question,
@@ -478,7 +495,7 @@ class QuestionDetailView(LoginRequiredMixin, AsideMixin, TemplateView):
                     "question_id": question_id
                 }
 
-                publish_to_centrifuge(f"question_{question_id}", {
+                publish_to_centrifuge(question.get_centrifugo_channel(), {
                     "type": "new_answer",
                     "answer": serialized_answer
                 })

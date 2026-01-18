@@ -10,9 +10,14 @@ PROJECT_NAME = "askme_chukhvichev"
 
 SECRET_KEY = os.getenv("SECRET_KEY", "!secret_key!")
 
-DEBUG = os.getenv("DEBUG", "False")
+DEBUG = os.getenv("DEBUG", "True")
 
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1,0.0.0.0,web").split(",")
+
+if DEBUG:
+    ALLOWED_HOSTS = ['*']
+
+CSRF_TRUSTED_ORIGINS = os.getenv("CSRF_TRUSTED_ORIGINS", "http://localhost,http://127.0.0.1,http://0.0.0.0,http://web").split(",")
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -22,9 +27,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.postgres',
-]
-INSTALLED_APPS += [
-    "app"
+    'app',
 ]
 
 MIDDLEWARE = [
@@ -64,7 +67,7 @@ DATABASES = {
         'NAME': os.getenv('DB_NAME', 'askme_chukhvichev'),
         'USER': os.getenv('DB_USER', 'postgres'),
         'PASSWORD': os.getenv('DB_PASSWORD', 'spring20'),
-        'HOST': os.getenv('DB_HOST', 'localhost'),
+        'HOST': os.getenv('DB_HOST', 'db'),
         'PORT': os.getenv('DB_PORT', '5432'),
     }
 }
@@ -111,7 +114,7 @@ LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
 
-CENTRIFUGO_URL = os.getenv('CENTRIFUGO_URL', 'http://localhost:8010')
+CENTRIFUGO_URL = os.getenv('CENTRIFUGO_URL', 'http://centrifugo:8010')
 CENTRIFUGO_API_KEY = os.getenv('API_KEY', 'my_api_key_for_django')
 CENTRIFUGO_HMAC_SECRET = os.getenv('TOKEN_HMAC_SECRET_KEY', 'my_secret_jwt_key_for_centrifugo')
 
@@ -121,3 +124,9 @@ CACHES = {
         'LOCATION': 'unique-snowflake',
     }
 }
+
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
+
+USE_X_FORWARDED_HOST = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')

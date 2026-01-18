@@ -50,6 +50,9 @@ class Question(models.Model):
     def __str__(self):
         return self.title
 
+    def get_centrifugo_channel(self):
+        return f"question_{self.pk}"
+
 
 class Answer(models.Model):
     content = models.TextField(verbose_name="Контент", max_length=4000)
@@ -70,6 +73,12 @@ class Answer(models.Model):
 
     def __str__(self):
         return f"Ответ #{self.id} к вопросу #{self.question_id}"
+
+    def get_centrifugo_channel(self):
+        return f"answer_{self.pk}"
+
+    def get_question_channel(self):
+        return f"question_{self.question.pk}"
 
 
 class QuestionLike(models.Model):
